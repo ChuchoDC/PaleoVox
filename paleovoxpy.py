@@ -119,63 +119,45 @@ plt.rcParams.update({
 
 """## Load Functions"""
 
-def load_mesh(path: str):
+def load_mesh(path: str, return_bounds: bool = False):
     """
     Load a 3D triangle mesh from a file using Open3D.
-
-    This function provides a simple wrapper around Open3D's mesh loading
-    functionality, reading 3D mesh files and returning the mesh object
-    for further processing.
-
+    
     Parameters
     ----------
     path : str
-        File path to the input mesh. Supports formats readable by Open3D,
-        including:
-        - `.obj` : Wavefront OBJ
-        - `.ply` : Polygon File Format
-        - `.stl` : Stereolithography
-        - `.off` : Object File Format
-        - `.gltf` / `.glb` : GL Transmission Format
+        File path to the input mesh.
+    return_bounds : bool, default=False
+        If True, returns a tuple (mesh, bounds, scale) where:
+        - bounds: (min_bound, max_bound) original mesh boundaries
+        - scale: original mesh dimensions (max_bound - min_bound)
+        If False, returns only the mesh (backward compatible).
 
     Returns
     -------
-    open3d.geometry.TriangleMesh
-        Loaded triangle mesh object. Can be used with other Open3D functions
-        for visualization, processing, or conversion to voxel grids.
-
-    Notes
-    -----
-    This is a thin wrapper around `o3d.io.read_triangle_mesh()`. For production
-    code, consider adding error handling.
-
-    Examples
-    --------
-    >>> # Load a mesh for visualization
-    >>> mesh = load_mesh("model.obj")
-    >>> plot_meshes(mesh)
-
-    >>> # Load and convert to voxels
-    >>> mesh = load_mesh("fossil.ply")
-    >>> voxels = mesh_to_voxel(mesh, dimensions=128)
-
-    >>> # Load mesh for reconstruction comparison
-    >>> original = load_mesh("original.ply")
-    >>> reconstructed = high_quality_voxel_to_mesh(voxels, original_mesh=original)
-
-    Requirements
-    ------------
-    - open3d (imported as o3d)
-
-    See Also
-    --------
-    o3d.io.read_triangle_mesh : Underlying Open3D function
-    save_mesh : Save mesh to file
-    plot_mesh : Visualize loaded mesh
-    mesh_to_voxel : Convert mesh to voxel representation
+    open3d.geometry.TriangleMesh or tuple
+        If return_bounds=False: Loaded triangle mesh object.
+        If return_bounds=True: (mesh, min_bound, max_bound, dimensions)
     """
-    # First convert to mesh:
     mesh = o3d.io.read_triangle_mesh(path)
+    
+    if return_bounds:
+        # Get original mesh bounds
+        min_bound = mesh.get_min_bound()
+        max_bound = mesh.get_max_bound()
+        dimensions = max_bound - min_bound
+        
+        # Also compute the center for potential centering operations
+        center = (min_bound + max_bound) / 2
+        
+        print(f"Original mesh bounds:")
+        print(f"  Min: {min_bound}")
+        print(f"  Max: {max_bound}")
+        print(f"  Dimensions: {dimensions}")
+        print(f"  Center: {center}")
+        
+        return mesh, min_bound, max_bound, dimensions
+    
     return mesh
 
 def load_voxel(path: str):
@@ -231,114 +213,76 @@ def load_voxel(path: str):
 
 """## Mesh To Voxel"""
 
-def mesh_to_voxel(mesh, npoints: int = 10000, dimensions: int = 128, pr: bool = False):
+def mesh_to_voxel(mesh, npoints: int = 10000, dimensions: int = 128, 
+                  pr: bool = False, return_scale_info: bool = False):
     """
     Convert a 3D mesh file to a voxel grid representation.
-
-    This function reads a 3D mesh file, samples points from its surface using Poisson disk sampling,
-    and converts the point cloud into a dense voxel grid of specified dimensions. The resulting
-    voxel array can be used for various 3D deep learning tasks, volumetric analysis, or visualization.
-
+    
     Parameters
     ----------
-    mesh:
-        Mesh representing the figure under processing, like: TriangleMesh with 1530891
-        points and 3000000 triangles. It can be obtained using load_mesh()
-
+    mesh : open3d.geometry.TriangleMesh
+        Mesh to convert to voxels.
     npoints : int, default=10000
-        Number of points to sample from the mesh surface using Poisson disk sampling.
-        Higher values produce denser point clouds but increase computation time.
-
+        Number of points to sample from the mesh surface.
     dimensions : int, default=128
-        Size of the cubic voxel grid. The output array will have shape
-        (dimensions, dimensions, dimensions). Common values are 32, 64, 128, or 256.
-
+        Size of the cubic voxel grid.
     pr : bool, default=False
-        If True, print debug information including the output array shape and number of
-        occupied voxels. Useful for monitoring and debugging.
-
+        If True, print debug information.
+    return_scale_info : bool, default=False
+        If True, returns (voxel_array, scale_factor, original_bounds, center)
+        to enable proper reconstruction at original scale.
+    
     Returns
     -------
-    numpy.ndarray
-        A 3D numpy array of shape (dimensions, dimensions, dimensions) with dtype uint8.
-        Voxels containing mesh surface points are marked as 1, empty voxels as 0.
-
-    Notes
-    -----
-    The conversion process involves several steps:
-
-    1. **Mesh Loading**: Reads the input mesh file using Open3D.
-    2. **Point Sampling**: Uses Poisson disk sampling to generate uniformly distributed
-       points on the mesh surface. This provides better coverage than random sampling.
-    3. **Voxel Grid Creation**: Automatically calculates the optimal voxel size to fit the
-       point cloud into the specified grid dimensions while preserving the mesh's aspect ratio.
-    4. **Dense Array Generation**: Creates a dense binary voxel grid where occupied cells
-       are marked with 1 and empty cells with 0.
-
-    The voxel size is automatically calculated to ensure the entire point cloud fits within
-    the specified grid while maintaining proportional spacing. Points are clipped to grid
-    boundaries to prevent indexing errors.
-
-    Examples
-    --------
-    Basic usage with default parameters:
-
-    >>> voxel_array = mesh_to_voxel(_mesh)
-    >>> print(voxel_array.shape)
-    (128, 128, 128)
-
-    Custom parameters with debug output:
-
-    >>> voxel_array = mesh_to_voxel(_mesh, npoints=50000, dimensions=64, pr=True)
-    (64, 64, 64)
-    Number of occupied voxels: 15243
-
-    Visualize the result:
-
-    >>> plot_fossile(voxel_array)
-
-    Requirements
-    ------------
-    - open3d (imported as o3d)
-    - numpy (imported as np)
-
-    See Also
-    --------
-    open3d.geometry.VoxelGrid.create_from_point_cloud : Underlying voxelization method
-    open3d.geometry.TriangleMesh.sample_points_poisson_disk : Point sampling method
-
-    Warnings
-    --------
-    - The function assumes the input file contains a valid mesh.
-    - Very large meshes or high npoints values may consume significant memory.
-    - The output is a binary occupancy grid; no surface normals or color information is preserved.
+    numpy.ndarray or tuple
+        If return_scale_info=False: Voxel array of shape (dimensions, dimensions, dimensions)
+        If return_scale_info=True: (voxel_array, scale_factor, original_bounds, original_center)
     """
-    # Convert to Cloud Point:
+    # Get original bounds BEFORE any transformation
+    original_min_bound = mesh.get_min_bound()
+    original_max_bound = mesh.get_max_bound()
+    original_center = (original_min_bound + original_max_bound) / 2
+    original_dimensions = original_max_bound - original_min_bound
+    
+    # Sample points from mesh surface
     pcd = mesh.sample_points_poisson_disk(number_of_points=npoints)
+    
     # Define the dimensions
     j = dimensions
-    # Calculate the voxel size to fit the point cloud into a (128, 128, 128) grid
+    
+    # Calculate the voxel size to fit the point cloud into a (dimensions, dimensions, dimensions) grid
     min_bound = pcd.get_min_bound()
     max_bound = pcd.get_max_bound()
     voxel_size = np.max((max_bound - min_bound) / j)
-
+    
+    # Calculate scale factor for reconstruction
+    # This tells us how to scale back to original size
+    normalized_dimensions = max_bound - min_bound
+    scale_factor = original_dimensions / normalized_dimensions
+    
     # Create an Open3D VoxelGrid
     voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size)
-
-    # Initialize an empty (128, 128, 128) numpy array
+    
+    # Initialize an empty numpy array
     voxel_array = np.zeros((j, j, j), dtype=np.uint8)
-
+    
     # Get the voxel coordinates from the voxel grid and map them to the dense array
     for voxel in voxel_grid.get_voxels():
         grid_index = voxel.grid_index
-        # Ensure the index fits within the 128x128x128 grid
+        # Ensure the index fits within the grid
         x, y, z = np.clip(grid_index, 0, j-1)
-        voxel_array[x, y, z] = 1  # Mark the voxel as occupied
-
+        voxel_array[x, y, z] = 1
+    
     if pr:
-        print(voxel_array.shape)  # Output: (128, 128, 128)
-        print("Number of occupied voxels:", np.sum(voxel_array))
-
+        print(f"Voxel array shape: {voxel_array.shape}")
+        print(f"Number of occupied voxels: {np.sum(voxel_array)}")
+        print(f"Original dimensions: {original_dimensions}")
+        print(f"Normalized dimensions: {normalized_dimensions}")
+        print(f"Reconstruction scale factor: {scale_factor}")
+    
+    if return_scale_info:
+        return voxel_array, scale_factor, original_min_bound, original_max_bound, original_center
+    
     return voxel_array
 
 """## Plot Voxel"""
@@ -713,149 +657,62 @@ def binary_dilation(array_3d, iterations=2):
 
 """## Voxel To Mesh"""
 
-def high_quality_voxel_to_mesh(voxel_array, voxel_size=1.0):
+def high_quality_voxel_to_mesh(voxel_array, voxel_size=1.0, 
+                                target_scale=None, original_bounds=None):
     """
-    Convert a voxel grid to a high-quality 3D mesh using advanced reconstruction techniques.
-
-    This function implements an enhanced pipeline for converting binary voxel data into a
-    smooth, watertight mesh. It incorporates intelligent downsampling, adaptive normal
-    estimation, optimized Poisson surface reconstruction, and advanced mesh post-processing
-    to produce high-fidelity results, particularly suitable for dense voxel grids (e.g.,
-    153K+ points).
-
+    Convert a voxel grid to a high-quality 3D mesh.
+    
     Parameters
     ----------
     voxel_array : numpy.ndarray
-        Binary voxel array of shape (n, n, n) where values > 0 indicate occupied voxels.
-        The array represents a volumetric occupancy grid to be converted to a mesh.
-
+        Binary voxel array of shape (n, n, n).
     voxel_size : float, default=1.0
-        Physical size of each voxel in world units. This scaling factor determines the
-        actual dimensions of the reconstructed mesh. For example, if your voxel grid
-        represents a 128×128×128 volume where each voxel is 0.1mm, set voxel_size=0.1.
-
+        Physical size of each voxel in world units.
+    target_scale : tuple or array, optional
+        If provided, scales the reconstructed mesh to match these dimensions.
+        Typically the original mesh's dimensions (max_bound - min_bound).
+    original_bounds : tuple, optional
+        If provided, translates the mesh to match original position.
+        Should be (min_bound, max_bound) from the original mesh.
+    
     Returns
     -------
     open3d.geometry.TriangleMesh
-        Reconstructed triangle mesh with optimized geometry. The mesh is cleaned,
-        smoothed, and filtered for optimal visual and structural quality.
-
-    Notes
-    -----
-    The reconstruction pipeline consists of several sophisticated stages:
-
-    1. **Point Cloud Generation**: Converts occupied voxels to 3D points with proper
-       spatial scaling.
-
-    2. **Intelligent Downsampling**: Automatically reduces point density when exceeding
-       target counts (default 500K points) while preserving geometric features.
-       Uses voxel downsampling with adaptive size calculation.
-
-    3. **Adaptive Normal Estimation**: Computes surface normals using hybrid search
-       parameters based on local point spacing. The radius is automatically calculated
-       from average nearest-neighbor distances.
-
-    4. **Normal Orientation**: Orients normals consistently using tangent plane
-       propagation (k=30 neighbors) for proper surface reconstruction.
-
-    5. **Optimized Poisson Reconstruction**: Applies Poisson surface reconstruction with
-       adaptive depth based on point cloud size. Depth is automatically calculated as
-       `min(12, log2(n_points) - 2)` to balance detail and performance.
-
-    6. **Density-Based Filtering**: Removes low-confidence vertices (bottom 15th percentile
-       of reconstruction densities) to eliminate noise and artifacts.
-
-    7. **Mesh Cleaning**: Eliminates degenerate triangles, duplicates, and redundant
-       vertices for a clean, manifold mesh.
-
-    8. **Feature-Preserving Smoothing**: Applies Taubin smoothing (10 iterations) which
-       reduces noise without shrinking the mesh, preserving geometric features.
-
-    9. **Quality Assessment** (optional): Computes mean and max Hausdorff distance to
-       original mesh if provided.
-
-    The function is optimized for large voxel grids (e.g., 128³) with hundreds of
-    thousands of occupied voxels, balancing reconstruction quality with computational
-    efficiency.
-
-    Examples
-    --------
-    Basic reconstruction from voxel data:
-
-    >>> voxel_data = mesh_to_voxel("model.obj", dimensions=128)
-    >>> mesh = high_quality_voxel_to_mesh(voxel_data, voxel_size=0.1)
-    >>> o3d.io.write_triangle_mesh("reconstructed.ply", mesh)
-
-    Technical Details
-    -----------------
-    - **Target Point Count**: Default 500,000 points for optimal Poisson reconstruction
-    - **Poisson Depth**: Automatically scaled between 8-12 based on point density
-    - **Normal Estimation**: Uses 50 nearest neighbors with 5× average spacing radius
-    - **Density Filtering**: Removes bottom 15% by default (configurable in code)
-    - **Smoothing**: Taubin smoothing (λ=0.5, μ=-0.53) for 10 iterations
-
-    Requirements
-    ------------
-    - numpy (imported as np)
-    - open3d (imported as o3d)
-
-    See Also
-    --------
-    mesh_to_voxel : Inverse operation for creating voxel grids from meshes
-    open3d.geometry.TriangleMesh.create_from_point_cloud_poisson : Core reconstruction method
-    open3d.geometry.PointCloud.voxel_down_sample : Downsampling method
-
-    Warnings
-    --------
-    - **Memory Usage**: Processing large voxel grids (256³+) with many occupied voxels
-      may require significant RAM (8GB+). Consider downsampling or using a sparser
-      representation for extremely large datasets.
-
-    - **Performance**: Poisson reconstruction at depth >10 can be computationally
-      intensive. The function automatically limits depth to 12 for practical performance.
-
-    - **Watertight Meshes**: Poisson reconstruction always produces watertight (closed)
-      meshes. If your original object is not watertight, the result may have unwanted
-      closed cavities.
-
-    - **Normal Orientation**: Proper normal estimation is critical for quality.
-      The function uses tangent plane propagation, but very thin or complex structures
-      may still have orientation errors.
-
-    - **Voxel Size**: Incorrect voxel_size values will produce meshes with wrong
-      physical dimensions. Ensure this matches your actual voxel spacing.
-
-    Notes for Customization
-    -----------------------
-    Key parameters that can be tuned for specific use cases (by modifying function code):
-
-    - `target_point_count`: Adjust for memory/quality trade-off
-    - `density_threshold`: Modify percentile for vertex filtering
-    - `optimal_depth`: Override auto-calculation for more/less detail
-    - `smoothing_iterations`: Increase for smoother results, decrease to preserve detail
-
-    The current parameters are optimized for dense voxel grids (∼150K-500K occupied voxels)
-    and general-purpose use.
+        Reconstructed triangle mesh.
     """
     occupied_indices = np.argwhere(voxel_array > 0)
     points = occupied_indices * voxel_size
-
+    
     print(f"Processing {len(points)} occupied voxels")
-
+    
+    # Apply scaling to match original dimensions if requested
+    if target_scale is not None:
+        current_bounds = np.array([points.min(axis=0), points.max(axis=0)])
+        current_scale = current_bounds[1] - current_bounds[0]
+        scale_factor = target_scale / current_scale
+        points = points * scale_factor
+        print(f"Applied scale factor: {scale_factor}")
+    
     # 1. Create and pre-process point cloud
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
-
+    
+    # Apply translation to match original position if requested
+    if original_bounds is not None:
+        original_min, original_max = original_bounds
+        original_center = (original_min + original_max) / 2
+        current_center = points.mean(axis=0)
+        translation = original_center - current_center
+        pcd.translate(translation)
+        print(f"Applied translation: {translation}")
+    
     # 2. Smart downsampling based on density
-    # Your original mesh has ~1.5M points, but voxel grid might have more
-    target_point_count = 500000  # Adjust based on your needs
+    target_point_count = 500000
     if len(points) > target_point_count:
-        # Calculate appropriate voxel size for downsampling
         current_volume = len(points) * (voxel_size ** 3)
         target_volume = target_point_count * (voxel_size ** 3)
-        scale_factor = (target_volume / current_volume) ** (1/3)
-        downsample_size = voxel_size * scale_factor
-
+        scale_factor_down = (target_volume / current_volume) ** (1/3)
+        downsample_size = voxel_size * scale_factor_down
         pcd = pcd.voxel_down_sample(downsample_size)
         print(f"Downsampled to {len(np.asarray(pcd.points))} points")
 
@@ -919,10 +776,12 @@ def high_quality_voxel_to_mesh(voxel_array, voxel_size=1.0):
                                      mu=-0.53)
 
     return mesh
+    
+    return mesh
 
 """## Plot Mesh"""
 
-def plot_meshes(mesh1, mesh2=None, opacity1=0.5, opacity2=0.5, colors=None, names=['M1', 'M2']):
+def plot_meshes(mesh1, mesh2=None, opacity1=0.5, opacity2=0.5, colors=None, names=['M1', 'M2'], title='Mesh!'):
     """
     Visualize one or two 3D meshes using Plotly with coordinate axes.
 
@@ -936,8 +795,10 @@ def plot_meshes(mesh1, mesh2=None, opacity1=0.5, opacity2=0.5, colors=None, name
         Opacity for each mesh.
     colors : list of str, optional
         Colors for the two meshes, e.g. ['blue', 'red'].
-    names : list of str, default=['M1, M2']
+    names : list of str, default=['M1', 'M2']
         Legend names for the meshes.
+    title : str, default='Mesh!'
+        Title of the plot.
 
     Returns
     -------
@@ -951,8 +812,8 @@ def plot_meshes(mesh1, mesh2=None, opacity1=0.5, opacity2=0.5, colors=None, name
     triangles1 = np.asarray(mesh1.triangles)
 
     if mesh2 is not None:
-      vertices2 = np.asarray(mesh2.vertices)
-      triangles2 = np.asarray(mesh2.triangles)
+        vertices2 = np.asarray(mesh2.vertices)
+        triangles2 = np.asarray(mesh2.triangles)
 
     if colors is None:
         color1 = 'blue'
@@ -961,53 +822,68 @@ def plot_meshes(mesh1, mesh2=None, opacity1=0.5, opacity2=0.5, colors=None, name
         color1, color2 = colors
 
     if mesh2 is None:
-      fig = go.Figure(data=[
-          go.Mesh3d(
-              x=vertices1[:, 0],
-              y=vertices1[:, 1],
-              z=vertices1[:, 2],
-              i=triangles1[:, 0],
-              j=triangles1[:, 1],
-              k=triangles1[:, 2],
-              opacity=opacity1,
-              color=color1,
-              name='Mesh 1'
-          )
-      ])
+        fig = go.Figure(data=[
+            go.Mesh3d(
+                x=vertices1[:, 0],
+                y=vertices1[:, 1],
+                z=vertices1[:, 2],
+                i=triangles1[:, 0],
+                j=triangles1[:, 1],
+                k=triangles1[:, 2],
+                opacity=opacity1,
+                color=color1,
+                name=names[0],  # Use the provided name
+                showlegend=True,  # Explicitly enable legend for this trace
+                legendgroup=names[0],  # Group legend items
+                legendgrouptitle_text=names[0]  # Optional: group title
+            )
+        ])
     else:
+        fig = go.Figure(data=[
+            go.Mesh3d(
+                x=vertices1[:, 0],
+                y=vertices1[:, 1],
+                z=vertices1[:, 2],
+                i=triangles1[:, 0],
+                j=triangles1[:, 1],
+                k=triangles1[:, 2],
+                opacity=opacity1,
+                color=color1,
+                name=names[0],
+                showlegend=True,
+                legendgroup=names[0]
+            ),
+            go.Mesh3d(
+                x=vertices2[:, 0],
+                y=vertices2[:, 1],
+                z=vertices2[:, 2],
+                i=triangles2[:, 0],
+                j=triangles2[:, 1],
+                k=triangles2[:, 2],
+                opacity=opacity2,
+                color=color2,
+                name=names[1],
+                showlegend=True,
+                legendgroup=names[1]
+            )
+        ])
 
-      fig = go.Figure(data=[
 
-          go.Mesh3d(
-              x=vertices1[:, 0],
-              y=vertices1[:, 1],
-              z=vertices1[:, 2],
-              i=triangles1[:, 0],
-              j=triangles1[:, 1],
-              k=triangles1[:, 2],
-              opacity=opacity1,
-              color=color1,
-              name=names[0]
-          ),
-          go.Mesh3d(
-              x=vertices2[:, 0],
-              y=vertices2[:, 1],
-              z=vertices2[:, 2],
-              i=triangles2[:, 0],
-              j=triangles2[:, 1],
-              k=triangles2[:, 2],
-              opacity=opacity2,
-              color=color2,
-              name=names[1]
-          )
-      ])
-
-    fig.add_scatter3d(x=[0, 10], y=[0, 0], z=[0, 0], mode='lines',
-                      line=dict(color='red', width=5), name='X axis')
-    fig.add_scatter3d(x=[0, 0], y=[0, 10], z=[0, 0], mode='lines',
-                      line=dict(color='green', width=5), name='Y axis')
-    fig.add_scatter3d(x=[0, 0], y=[0, 0], z=[0, 10], mode='lines',
-                      line=dict(color='blue', width=5), name='Z axis')
+    # Update layout with legend positioned on the left
+    fig.update_layout(
+        scene=dict(
+            xaxis=dict(visible=True, title='X'),
+            yaxis=dict(visible=True, title='Y'),
+            zaxis=dict(visible=True, title='Z'),
+            aspectmode='data'
+        ),
+        title=title,
+        showlegend=True,
+        legend=dict(
+            xanchor='right',  # Anchor point for x position
+            yanchor='top',   # Anchor point for y position
+        )
+    )
 
     fig.show()
 

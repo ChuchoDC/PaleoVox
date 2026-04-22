@@ -1,6 +1,6 @@
 # PaleoVoxPy
 
-**Version 1.0.6** – *Data Augmentation for 3D Fossils*
+**Version 1.0.7** – *Data Augmentation for 3D Fossils*
 
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -45,10 +45,19 @@ Place `paleovoxpy.py` in your project or import directly.
 import paleovoxpy as pv
 
 # 1. Load a mesh
-mesh = pv.load_mesh("fossil.obj")
+_mesh, min_bound, max_bound, dimensions = pv.load_mesh(path, return_bounds= True)
 
 # 2. Convert to voxel grid (128³)
-voxels = pv.mesh_to_voxel(mesh, dimensions=128)
+voxels, scale_factor, orig_min, orig_max, orig_center = pv.mesh_to_voxel(
+    mesh = _mesh,
+    npoints = 10000,
+    dimensions = 128,
+    pr = True, 
+    return_scale_info= True
+)
+
+# 2.1 [Optional but highly recommened]: Apply binary dilation to increase the point density in the voxel: 
+voxels = pv.binary_dilation(voxels, iterations = 5) # 5 often gives better results
 
 # 3. Apply compaction (simulate burial)
 compacted = pv.deformation(voxels, compaction_factor=0.85, compaction_axis=0)
@@ -57,10 +66,15 @@ compacted = pv.deformation(voxels, compaction_factor=0.85, compaction_axis=0)
 fractured = pv.propagator_fracture(compacted, max_position=10)
 
 # 5. Reconstruct a mesh
-reconstructed = pv.high_quality_voxel_to_mesh(fractured, voxel_size=0.1)
+reconstructed = high_quality_voxel_to_mesh(
+                fractured, 
+                voxel_size=1.0,
+                target_scale=dimensions,  # Original dimensions
+                original_bounds=(orig_min, orig_max)  # Original position
+            )
 
 # 6. Visualise
-pv.plot_meshes(mesh, reconstructed, names=['Original', 'Augmented'])
+pv.plot_meshes(_mesh, reconstructed, names=['Original', 'Augmented'])
 ```
 
 ---
