@@ -653,7 +653,7 @@ def binary_dilation(array_3d, iterations=2):
     # Fill any remaining holes
     filled = ndimage.binary_fill_holes(eroded)
 
-    return filled.astype(np.int8)
+    return np.array(filled.astype(np.int8))
 
 """## Voxel To Mesh"""
 

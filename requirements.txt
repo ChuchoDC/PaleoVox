@@ -1,0 +1,8 @@
+open3d
+numpy
+scipy
+matplotlib
+seaborn
+plotly
+scikit-learn
+PyQt5
