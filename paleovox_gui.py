@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGroupBox, QPushButton, QLabel, QSpinBox, QDoubleSpinBox,
     QComboBox, QCheckBox, QFileDialog, QStatusBar, QMessageBox,
-    QSplitter, QFrame, QSizePolicy
+    QSplitter, QFrame, QSizePolicy, QDialog
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont, QPalette, QColor, QIcon, QPixmap
@@ -208,8 +208,17 @@ class PaleoVoxGUI(QMainWindow):
 
         layout.addStretch()
 
-        about_group = QGroupBox("More about PaleoVox")
-        about_layout = QVBoxLayout(about_group)
+        btn_about = QPushButton("More about PaleoVox...")
+        btn_about.clicked.connect(self._on_show_about)
+        layout.addWidget(btn_about)
+
+        return panel
+
+    def _on_show_about(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("About PaleoVox")
+        dialog.setMinimumSize(500, 350)
+        layout = QVBoxLayout(dialog)
 
         about_text = (
             "PaleoVox is a Python library for 3D fossil data augmentation "
@@ -219,24 +228,29 @@ class PaleoVoxGUI(QMainWindow):
         )
         about_lbl = QLabel(about_text)
         about_lbl.setWordWrap(True)
-        about_layout.addWidget(about_lbl)
+        layout.addWidget(about_lbl)
 
         creators_lbl = QLabel("Creators:")
-        creators_lbl.setStyleSheet("font-weight: bold; margin-top: 8px;")
-        about_layout.addWidget(creators_lbl)
+        creators_lbl.setStyleSheet("font-weight: bold; margin-top: 12px;")
+        layout.addWidget(creators_lbl)
 
-        self.creators_info = QLabel(
+        creators_text = (
             "Author 1 — email@institution.edu — Institution\n"
             "Author 2 — email@institution.edu — Institution\n"
             "Author 3 — email@institution.edu — Institution\n"
             "Author 4 — email@institution.edu — Institution"
         )
-        self.creators_info.setWordWrap(True)
-        self.creators_info.setStyleSheet("font-size: 10px; color: #555;")
-        about_layout.addWidget(self.creators_info)
+        creators_info = QLabel(creators_text)
+        creators_info.setWordWrap(True)
+        creators_info.setStyleSheet("font-size: 10px; color: #555;")
+        layout.addWidget(creators_info)
 
-        layout.addWidget(about_group)
-        return panel
+        layout.addStretch()
+        btn_close = QPushButton("Close")
+        btn_close.clicked.connect(dialog.accept)
+        layout.addWidget(btn_close)
+
+        dialog.show()
 
     def _build_right_panel(self):
         panel = QWidget()
@@ -435,6 +449,15 @@ class PaleoVoxGUI(QMainWindow):
         self.btn_compare.clicked.connect(self._on_compare_meshes)
         btn_row1.addWidget(self.btn_compare)
         rl.addLayout(btn_row1)
+
+        compare_opts = QHBoxLayout()
+        compare_opts.addWidget(QLabel("Show:"))
+        self.combo_compare_vis = QComboBox()
+        self.combo_compare_vis.addItems(["Both", "Original Only", "Reconstructed Only"])
+        self.combo_compare_vis.setCurrentIndex(0)
+        compare_opts.addWidget(self.combo_compare_vis)
+        compare_opts.addStretch()
+        rl.addLayout(compare_opts)
 
         btn_row2 = QHBoxLayout()
         self.btn_save_reconstructed = QPushButton("Save Reconstructed Mesh")
@@ -735,10 +758,10 @@ class PaleoVoxGUI(QMainWindow):
                 return
             pcd = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(occupied.astype(np.float64))
+            pcd.paint_uniform_color(self.voxel_display_color)
             voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(
                 pcd, voxel_size=1.0
             )
-            voxel_grid.paint_uniform_color(self.voxel_display_color)
             threading.Thread(
                 target=lambda: o3d.visualization.draw_geometries(
                     [voxel_grid], window_name="PaleoVox — Voxel View",
@@ -780,15 +803,27 @@ class PaleoVoxGUI(QMainWindow):
         if self.original_mesh is None or self.reconstructed_mesh is None:
             return
         try:
-            orig = o3d.geometry.TriangleMesh(self.original_mesh)
-            recon = o3d.geometry.TriangleMesh(self.reconstructed_mesh)
-            orig.paint_uniform_color((0.2, 0.2, 0.8))
-            recon.paint_uniform_color((0.8, 0.2, 0.2))
-            self._status("Displaying comparison: Original (Blue) vs Reconstructed (Red)")
+            vis_mode = self.combo_compare_vis.currentText()
+            geoms = []
+            title = "PaleoVox — "
+            if vis_mode in ("Both", "Original Only"):
+                orig = o3d.geometry.TriangleMesh(self.original_mesh)
+                orig.paint_uniform_color((0.2, 0.2, 0.8))
+                geoms.append(orig)
+                title += "Original (Blue)"
+            if vis_mode in ("Both", "Reconstructed Only"):
+                recon = o3d.geometry.TriangleMesh(self.reconstructed_mesh)
+                recon.paint_uniform_color((0.8, 0.2, 0.2))
+                geoms.append(recon)
+                if vis_mode == "Both":
+                    title += " vs "
+                title += "Reconstructed (Red)"
+            if not geoms:
+                return
+            self._status(f"Displaying comparison: {vis_mode}")
             threading.Thread(
                 target=lambda: o3d.visualization.draw_geometries(
-                    [orig, recon],
-                    window_name="PaleoVox — Original (Blue) vs Reconstructed (Red)",
+                    geoms, window_name=title,
                     width=1024, height=768
                 ),
                 daemon=True
