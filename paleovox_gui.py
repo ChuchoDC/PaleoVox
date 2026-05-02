@@ -92,6 +92,7 @@ class PaleoVoxGUI(QMainWindow):
         self.original_mesh = None
         self.reconstructed_mesh = None
         self.voxel = None
+        self.original_voxel = None
         self.bounds = None
         self.scale_info = None
         self.fracture_pattern = None
@@ -260,6 +261,7 @@ class PaleoVoxGUI(QMainWindow):
         layout.addWidget(self._build_pipeline_group())
         layout.addWidget(self._build_augment_group())
         layout.addWidget(self._build_reconstruction_group())
+        layout.addWidget(self._build_voxel_comparison_group())
         layout.addWidget(self._build_view_save_group())
         layout.addStretch()
         return panel
@@ -468,6 +470,31 @@ class PaleoVoxGUI(QMainWindow):
 
         return group
 
+    def _build_voxel_comparison_group(self):
+        group = QGroupBox("Voxel Comparison")
+        vl = QVBoxLayout(group)
+
+        info_row = QHBoxLayout()
+        self.lbl_voxel_comp_info = QLabel("Original: —   Current: —")
+        info_row.addWidget(self.lbl_voxel_comp_info)
+        info_row.addStretch()
+        vl.addLayout(info_row)
+
+        opts_row = QHBoxLayout()
+        opts_row.addWidget(QLabel("Show:"))
+        self.combo_voxel_vis = QComboBox()
+        self.combo_voxel_vis.addItems(["Both", "Original Only", "Current Only"])
+        self.combo_voxel_vis.setCurrentIndex(0)
+        opts_row.addWidget(self.combo_voxel_vis)
+        opts_row.addStretch()
+        vl.addLayout(opts_row)
+
+        self.btn_compare_voxels = QPushButton("Compare Voxels")
+        self.btn_compare_voxels.clicked.connect(self._on_compare_voxels)
+        vl.addWidget(self.btn_compare_voxels)
+
+        return group
+
     def _on_color_changed(self):
         color_map = {
             "Blue": (0.2, 0.2, 0.8),
@@ -513,12 +540,25 @@ class PaleoVoxGUI(QMainWindow):
             self.lbl_voxel_shape.setText("Voxel shape: —")
             self.lbl_voxel_occupied.setText("Occupied voxels: —")
 
+        if self.original_voxel is not None and self.voxel is not None:
+            orig_occ = int(np.sum(self.original_voxel > 0))
+            curr_occ = int(np.sum(self.voxel > 0))
+            self.lbl_voxel_comp_info.setText(
+                f"Original: {orig_occ:,} voxels   Current: {curr_occ:,} voxels"
+            )
+        elif self.original_voxel is not None:
+            orig_occ = int(np.sum(self.original_voxel > 0))
+            self.lbl_voxel_comp_info.setText(f"Original: {orig_occ:,} voxels   Current: —")
+        else:
+            self.lbl_voxel_comp_info.setText("Original: —   Current: —")
+
     def _update_button_states(self):
         has_mesh = self.mesh is not None
         has_voxel = self.voxel is not None
         has_path = self.file_path is not None
         has_reconstructed = self.reconstructed_mesh is not None
         has_original = self.original_mesh is not None
+        has_original_voxel = self.original_voxel is not None
 
         self.btn_load.setEnabled(has_path)
         self.btn_to_voxel.setEnabled(has_mesh)
@@ -535,6 +575,7 @@ class PaleoVoxGUI(QMainWindow):
         self.btn_reconstruct.setEnabled(has_voxel)
         self.btn_compare.setEnabled(has_original and has_reconstructed)
         self.btn_save_reconstructed.setEnabled(has_reconstructed)
+        self.btn_compare_voxels.setEnabled(has_original_voxel and has_voxel)
 
     def _on_browse(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -554,6 +595,7 @@ class PaleoVoxGUI(QMainWindow):
         self.original_mesh = None
         self.reconstructed_mesh = None
         self.voxel = None
+        self.original_voxel = None
         self.bounds = None
         self.scale_info = None
         self.fracture_pattern = None
@@ -577,6 +619,7 @@ class PaleoVoxGUI(QMainWindow):
             self.reconstructed_mesh = None
             self.bounds = (min_bound, max_bound, dimensions)
             self.voxel = None
+            self.original_voxel = None
             self.scale_info = None
             self.fracture_pattern = None
 
@@ -604,6 +647,7 @@ class PaleoVoxGUI(QMainWindow):
                 return_scale_info=True
             )
             self.voxel = result[0]
+            self.original_voxel = self.voxel.copy()
             self.scale_info = result[1:]
             self.fracture_pattern = None
             self._update_info_panel()
@@ -830,6 +874,46 @@ class PaleoVoxGUI(QMainWindow):
             ).start()
         except Exception as e:
             self._show_error("Comparison Error", f"Failed to compare meshes:\n{e}")
+
+    def _on_compare_voxels(self):
+        if self.original_voxel is None or self.voxel is None:
+            return
+        try:
+            vis_mode = self.combo_voxel_vis.currentText()
+            geoms = []
+            title = "PaleoVox — "
+            if vis_mode in ("Both", "Original Only"):
+                occ_orig = np.argwhere(self.original_voxel > 0)
+                if len(occ_orig) > 0:
+                    pcd_orig = o3d.geometry.PointCloud()
+                    pcd_orig.points = o3d.utility.Vector3dVector(occ_orig.astype(np.float64))
+                    pcd_orig.paint_uniform_color((0.2, 0.2, 0.8))
+                    vg_orig = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd_orig, voxel_size=1.0)
+                    geoms.append(vg_orig)
+                    title += "Original (Blue)"
+            if vis_mode in ("Both", "Current Only"):
+                occ_curr = np.argwhere(self.voxel > 0)
+                if len(occ_curr) > 0:
+                    pcd_curr = o3d.geometry.PointCloud()
+                    pcd_curr.points = o3d.utility.Vector3dVector(occ_curr.astype(np.float64))
+                    pcd_curr.paint_uniform_color((0.8, 0.2, 0.2))
+                    vg_curr = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd_curr, voxel_size=1.0)
+                    geoms.append(vg_curr)
+                    if vis_mode == "Both":
+                        title += " vs "
+                    title += "Current (Red)"
+            if not geoms:
+                return
+            self._status(f"Displaying voxel comparison: {vis_mode}")
+            threading.Thread(
+                target=lambda: o3d.visualization.draw_geometries(
+                    geoms, window_name=title,
+                    width=1024, height=768
+                ),
+                daemon=True
+            ).start()
+        except Exception as e:
+            self._show_error("Voxel Comparison Error", f"Failed to compare voxels:\n{e}")
 
     def _on_save_reconstructed(self):
         if self.reconstructed_mesh is not None:

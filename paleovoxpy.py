@@ -2431,7 +2431,7 @@ def propagator_fracture(voxel_grid, max_position:int=10, return_both: bool = Fal
 
         except Exception as e:
 
-            _final = v_original - null_planes(v, _axis)
+            _final = v_original.astype(np.int8) - null_planes(v, _axis).astype(np.int8)
             _ind255 = np.where(_final == 255)
             _final[_ind255] = 0
 
