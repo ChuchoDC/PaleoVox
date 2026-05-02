@@ -236,8 +236,8 @@ class PaleoVoxGUI(QMainWindow):
         layout.addWidget(creators_lbl)
 
         creators_text = (
-            "Alan Gabriel Amaro Colin — alan_amaro@ciencias.unam.mx — Facultad de Ciencias UNAM\n"
-            "Author 2 — email@institution.edu — Institution\n"
+            "Alan Gabriel Amaro Colin — alan_amaro@ciencias.unam.mx — Facultad de Ciencias, UNAM\n"
+            "Jesus Alberto Díaz Cruz - vertebrata.j@geologia.unam.mx - Faclutad de Ciencias e Instituto  de Geología, UNAM\n"
             "Author 3 — email@institution.edu — Institution\n"
             "Author 4 — email@institution.edu — Institution"
         )
