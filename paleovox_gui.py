@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
     QSplitter, QFrame, QSizePolicy
 )
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QFont, QPalette, QColor
+from PyQt5.QtGui import QFont, QPalette, QColor, QIcon, QPixmap
 
 
 AXIS_MAP = {"X": 0, "Y": 1, "Z": 2}
@@ -89,16 +89,22 @@ class PaleoVoxGUI(QMainWindow):
         super().__init__()
         self.file_path = None
         self.mesh = None
+        self.original_mesh = None
+        self.reconstructed_mesh = None
         self.voxel = None
         self.bounds = None
         self.scale_info = None
         self.fracture_pattern = None
+        self.voxel_display_color = (0.2, 0.2, 0.8)
         self._init_ui()
         self._update_button_states()
 
     def _init_ui(self):
         self.setWindowTitle("PaleoVox — Fossil Voxel Augmentation")
         self.setMinimumSize(1100, 700)
+        logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo", "logo.png")
+        if os.path.exists(logo_path):
+            self.setWindowIcon(QIcon(logo_path))
         self.setStyleSheet("""
             QGroupBox {
                 font-weight: bold;
@@ -159,6 +165,14 @@ class PaleoVoxGUI(QMainWindow):
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(8, 8, 8, 8)
 
+        logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo", "logo.png")
+        if os.path.exists(logo_path):
+            logo_lbl = QLabel()
+            logo_pixmap = QPixmap(logo_path).scaledToWidth(200, Qt.SmoothTransformation)
+            logo_lbl.setPixmap(logo_pixmap)
+            logo_lbl.setAlignment(Qt.AlignCenter)
+            layout.addWidget(logo_lbl)
+
         self.drop_zone = DropZone()
         self.drop_zone.file_dropped.connect(self.on_load_mesh)
         layout.addWidget(self.drop_zone)
@@ -193,6 +207,35 @@ class PaleoVoxGUI(QMainWindow):
         layout.addWidget(reset_btn)
 
         layout.addStretch()
+
+        about_group = QGroupBox("More about PaleoVox")
+        about_layout = QVBoxLayout(about_group)
+
+        about_text = (
+            "PaleoVox is a Python library for 3D fossil data augmentation "
+            "using voxel representations. It supports mesh-to-voxel conversion, "
+            "morphological operations, damage simulations (erosion, deformation, "
+            "fracture, rotation), and high-quality voxel-to-mesh reconstruction."
+        )
+        about_lbl = QLabel(about_text)
+        about_lbl.setWordWrap(True)
+        about_layout.addWidget(about_lbl)
+
+        creators_lbl = QLabel("Creators:")
+        creators_lbl.setStyleSheet("font-weight: bold; margin-top: 8px;")
+        about_layout.addWidget(creators_lbl)
+
+        self.creators_info = QLabel(
+            "Author 1 — email@institution.edu — Institution\n"
+            "Author 2 — email@institution.edu — Institution\n"
+            "Author 3 — email@institution.edu — Institution\n"
+            "Author 4 — email@institution.edu — Institution"
+        )
+        self.creators_info.setWordWrap(True)
+        self.creators_info.setStyleSheet("font-size: 10px; color: #555;")
+        about_layout.addWidget(self.creators_info)
+
+        layout.addWidget(about_group)
         return panel
 
     def _build_right_panel(self):
@@ -202,6 +245,7 @@ class PaleoVoxGUI(QMainWindow):
 
         layout.addWidget(self._build_pipeline_group())
         layout.addWidget(self._build_augment_group())
+        layout.addWidget(self._build_reconstruction_group())
         layout.addWidget(self._build_view_save_group())
         layout.addStretch()
         return panel
@@ -339,25 +383,83 @@ class PaleoVoxGUI(QMainWindow):
 
     def _build_view_save_group(self):
         group = QGroupBox("View & Save")
-        vsl = QHBoxLayout(group)
+        vsl = QVBoxLayout(group)
 
+        top_row = QHBoxLayout()
+        top_row.addWidget(QLabel("Color:"))
+        self.combo_color = QComboBox()
+        self.combo_color.addItems(["Blue", "Red", "Green", "Orange", "Purple", "Cyan", "Yellow", "White", "Gray"])
+        self.combo_color.setCurrentIndex(0)
+        self.combo_color.setToolTip("Display color for mesh and voxel viewers")
+        self.combo_color.currentIndexChanged.connect(self._on_color_changed)
+        top_row.addWidget(self.combo_color)
+        top_row.addStretch()
+        vsl.addLayout(top_row)
+
+        row = QHBoxLayout()
         self.btn_view_mesh = QPushButton("View Mesh")
         self.btn_view_mesh.clicked.connect(self.on_view_mesh)
-        vsl.addWidget(self.btn_view_mesh)
+        row.addWidget(self.btn_view_mesh)
 
         self.btn_view_voxel = QPushButton("View Voxels")
         self.btn_view_voxel.clicked.connect(self.on_view_voxels)
-        vsl.addWidget(self.btn_view_voxel)
+        row.addWidget(self.btn_view_voxel)
 
         self.btn_save_mesh = QPushButton("Save Mesh")
         self.btn_save_mesh.clicked.connect(self.on_save_mesh)
-        vsl.addWidget(self.btn_save_mesh)
+        row.addWidget(self.btn_save_mesh)
 
         self.btn_save_voxel = QPushButton("Save Voxel")
         self.btn_save_voxel.clicked.connect(self.on_save_voxel)
-        vsl.addWidget(self.btn_save_voxel)
+        row.addWidget(self.btn_save_voxel)
+        vsl.addLayout(row)
 
         return group
+
+    def _build_reconstruction_group(self):
+        group = QGroupBox("Reconstruction & Comparison")
+        rl = QVBoxLayout(group)
+
+        info_row = QHBoxLayout()
+        self.lbl_recon_info = QLabel("Reconstructed: —")
+        info_row.addWidget(self.lbl_recon_info)
+        info_row.addStretch()
+        rl.addLayout(info_row)
+
+        btn_row1 = QHBoxLayout()
+        self.btn_reconstruct = QPushButton("Reconstruct from Voxels")
+        self.btn_reconstruct.clicked.connect(self._on_reconstruct)
+        btn_row1.addWidget(self.btn_reconstruct)
+
+        self.btn_compare = QPushButton("Compare Original vs Reconstructed")
+        self.btn_compare.clicked.connect(self._on_compare_meshes)
+        btn_row1.addWidget(self.btn_compare)
+        rl.addLayout(btn_row1)
+
+        btn_row2 = QHBoxLayout()
+        self.btn_save_reconstructed = QPushButton("Save Reconstructed Mesh")
+        self.btn_save_reconstructed.clicked.connect(self._on_save_reconstructed)
+        btn_row2.addWidget(self.btn_save_reconstructed)
+        btn_row2.addStretch()
+        rl.addLayout(btn_row2)
+
+        return group
+
+    def _on_color_changed(self):
+        color_map = {
+            "Blue": (0.2, 0.2, 0.8),
+            "Red": (0.8, 0.2, 0.2),
+            "Green": (0.2, 0.8, 0.2),
+            "Orange": (1.0, 0.6, 0.0),
+            "Purple": (0.6, 0.2, 0.8),
+            "Cyan": (0.0, 0.8, 0.8),
+            "Yellow": (1.0, 1.0, 0.0),
+            "White": (0.9, 0.9, 0.9),
+            "Gray": (0.5, 0.5, 0.5),
+        }
+        self.voxel_display_color = color_map.get(
+            self.combo_color.currentText(), (0.2, 0.2, 0.8)
+        )
 
     def _status(self, msg):
         self.status_bar.showMessage(msg)
@@ -392,6 +494,8 @@ class PaleoVoxGUI(QMainWindow):
         has_mesh = self.mesh is not None
         has_voxel = self.voxel is not None
         has_path = self.file_path is not None
+        has_reconstructed = self.reconstructed_mesh is not None
+        has_original = self.original_mesh is not None
 
         self.btn_load.setEnabled(has_path)
         self.btn_to_voxel.setEnabled(has_mesh)
@@ -401,10 +505,13 @@ class PaleoVoxGUI(QMainWindow):
         self.btn_erode.setEnabled(has_voxel)
         self.btn_rotate.setEnabled(has_voxel)
         self.btn_fracture.setEnabled(has_voxel)
-        self.btn_view_mesh.setEnabled(has_mesh)
+        self.btn_view_mesh.setEnabled(has_mesh or has_reconstructed)
         self.btn_view_voxel.setEnabled(has_voxel)
-        self.btn_save_mesh.setEnabled(has_mesh)
+        self.btn_save_mesh.setEnabled(has_mesh or has_reconstructed)
         self.btn_save_voxel.setEnabled(has_voxel)
+        self.btn_reconstruct.setEnabled(has_voxel)
+        self.btn_compare.setEnabled(has_original and has_reconstructed)
+        self.btn_save_reconstructed.setEnabled(has_reconstructed)
 
     def _on_browse(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -421,10 +528,13 @@ class PaleoVoxGUI(QMainWindow):
     def _on_reset(self):
         self.file_path = None
         self.mesh = None
+        self.original_mesh = None
+        self.reconstructed_mesh = None
         self.voxel = None
         self.bounds = None
         self.scale_info = None
         self.fracture_pattern = None
+        self.lbl_recon_info.setText("Reconstructed: —")
         self.drop_zone._apply_style("idle")
         self.drop_zone.setText("Drop .ply or .obj file here\n\n— or click to browse —")
         self._update_info_panel()
@@ -440,6 +550,8 @@ class PaleoVoxGUI(QMainWindow):
             self.mesh, min_bound, max_bound, dimensions = pv.load_mesh(
                 path, return_bounds=True
             )
+            self.original_mesh = o3d.geometry.TriangleMesh(self.mesh)
+            self.reconstructed_mesh = None
             self.bounds = (min_bound, max_bound, dimensions)
             self.voxel = None
             self.scale_info = None
@@ -508,10 +620,14 @@ class PaleoVoxGUI(QMainWindow):
                 target_scale=target_scale,
                 original_bounds=original_bounds
             )
+            self.reconstructed_mesh = self.mesh
             self._update_info_panel()
             self._update_button_states()
             verts = len(self.mesh.vertices)
             tris = len(self.mesh.triangles)
+            self.lbl_recon_info.setText(
+                f"Reconstructed: {verts:,} verts, {tris:,} tris"
+            )
             self._status(f"Mesh reconstructed — {verts:,} vertices, {tris:,} triangles")
         except Exception as e:
             self._show_error("Reconstruction Error",
@@ -599,11 +715,13 @@ class PaleoVoxGUI(QMainWindow):
             self._show_error("Fracture Error", f"Failed to apply fracture:\n{e}")
 
     def on_view_mesh(self):
-        if self.mesh is not None:
-            mesh = self.mesh
+        mesh = self.reconstructed_mesh if self.reconstructed_mesh is not None else self.mesh
+        if mesh is not None:
+            mesh_copy = o3d.geometry.TriangleMesh(mesh)
+            mesh_copy.paint_uniform_color(self.voxel_display_color)
             threading.Thread(
                 target=lambda: o3d.visualization.draw_geometries(
-                    [mesh], window_name="PaleoVox — Mesh View",
+                    [mesh_copy], window_name="PaleoVox — Mesh View",
                     width=1024, height=768
                 ),
                 daemon=True
@@ -620,6 +738,7 @@ class PaleoVoxGUI(QMainWindow):
             voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(
                 pcd, voxel_size=1.0
             )
+            voxel_grid.paint_uniform_color(self.voxel_display_color)
             threading.Thread(
                 target=lambda: o3d.visualization.draw_geometries(
                     [voxel_grid], window_name="PaleoVox — Voxel View",
@@ -627,6 +746,72 @@ class PaleoVoxGUI(QMainWindow):
                 ),
                 daemon=True
             ).start()
+
+    def _on_reconstruct(self):
+        if self.voxel is None:
+            return
+        try:
+            self._status("Reconstructing mesh from voxels...")
+            target_scale = None
+            original_bounds = None
+            if self.scale_info is not None:
+                _, orig_min, orig_max, _ = self.scale_info
+                target_scale = orig_max - orig_min
+                original_bounds = (orig_min, orig_max)
+            self.reconstructed_mesh = pv.high_quality_voxel_to_mesh(
+                self.voxel, voxel_size=1.0,
+                target_scale=target_scale,
+                original_bounds=original_bounds
+            )
+            self.mesh = self.reconstructed_mesh
+            verts = len(self.reconstructed_mesh.vertices)
+            tris = len(self.reconstructed_mesh.triangles)
+            self.lbl_recon_info.setText(
+                f"Reconstructed: {verts:,} verts, {tris:,} tris"
+            )
+            self._update_info_panel()
+            self._update_button_states()
+            self._status(f"Mesh reconstructed — {verts:,} vertices, {tris:,} triangles")
+        except Exception as e:
+            self._show_error("Reconstruction Error",
+                           f"Failed to reconstruct mesh:\n{e}")
+
+    def _on_compare_meshes(self):
+        if self.original_mesh is None or self.reconstructed_mesh is None:
+            return
+        try:
+            orig = o3d.geometry.TriangleMesh(self.original_mesh)
+            recon = o3d.geometry.TriangleMesh(self.reconstructed_mesh)
+            orig.paint_uniform_color((0.2, 0.2, 0.8))
+            recon.paint_uniform_color((0.8, 0.2, 0.2))
+            self._status("Displaying comparison: Original (Blue) vs Reconstructed (Red)")
+            threading.Thread(
+                target=lambda: o3d.visualization.draw_geometries(
+                    [orig, recon],
+                    window_name="PaleoVox — Original (Blue) vs Reconstructed (Red)",
+                    width=1024, height=768
+                ),
+                daemon=True
+            ).start()
+        except Exception as e:
+            self._show_error("Comparison Error", f"Failed to compare meshes:\n{e}")
+
+    def _on_save_reconstructed(self):
+        if self.reconstructed_mesh is not None:
+            default_name = ""
+            if self.file_path:
+                base = os.path.splitext(os.path.basename(self.file_path))[0]
+                default_name = f"{base}_reconstructed.ply"
+            path, _ = QFileDialog.getSaveFileName(
+                self, "Save Reconstructed Mesh", default_name,
+                "PLY Files (*.ply);;OBJ Files (*.obj)"
+            )
+            if path:
+                try:
+                    pv.save_mesh(self.reconstructed_mesh, path)
+                    self._status(f"Reconstructed mesh saved to {path}")
+                except Exception as e:
+                    self._show_error("Save Error", f"Failed to save mesh:\n{e}")
 
     def on_save_mesh(self):
         if self.mesh is not None:
