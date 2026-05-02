@@ -236,7 +236,7 @@ class PaleoVoxGUI(QMainWindow):
         layout.addWidget(creators_lbl)
 
         creators_text = (
-            "Author 1 — email@institution.edu — Institution\n"
+            "Alan Gabriel Amaro Colin — alan_amaro@ciencias.unam.mx — Facultad de Ciencias UNAM\n"
             "Author 2 — email@institution.edu — Institution\n"
             "Author 3 — email@institution.edu — Institution\n"
             "Author 4 — email@institution.edu — Institution"
@@ -296,13 +296,13 @@ class PaleoVoxGUI(QMainWindow):
         self.spin_npoints = QSpinBox()
         self.spin_npoints.setRange(100, 200000)
         self.spin_npoints.setSingleStep(1000)
-        self.spin_npoints.setValue(10000)
+        self.spin_npoints.setValue(100000)
         self.spin_npoints.setToolTip("Number of points sampled from mesh surface")
         row2.addWidget(self.spin_npoints)
         row2.addWidget(QLabel("dim:"))
         self.spin_dims = QSpinBox()
         self.spin_dims.setRange(32, 512)
-        self.spin_dims.setValue(128)
+        self.spin_dims.setValue(256)
         self.spin_dims.setToolTip("Voxel grid resolution (N×N×N)")
         row2.addWidget(self.spin_dims)
         self.btn_to_voxel = QPushButton("Mesh → Voxels")
