@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGroupBox, QPushButton, QLabel, QSpinBox, QDoubleSpinBox,
     QComboBox, QCheckBox, QFileDialog, QStatusBar, QMessageBox,
-    QSplitter, QFrame, QSizePolicy, QDialog
+    QSplitter, QFrame, QSizePolicy, QDialog, QTabWidget
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont, QPalette, QColor, QIcon, QPixmap
@@ -254,17 +254,32 @@ class PaleoVoxGUI(QMainWindow):
         dialog.show()
 
     def _build_right_panel(self):
-        panel = QWidget()
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(8, 8, 8, 8)
+        tabs = QTabWidget()
 
-        layout.addWidget(self._build_pipeline_group())
-        layout.addWidget(self._build_augment_group())
-        layout.addWidget(self._build_reconstruction_group())
-        layout.addWidget(self._build_voxel_comparison_group())
-        layout.addWidget(self._build_view_save_group())
-        layout.addStretch()
-        return panel
+        tab_pipeline = QWidget()
+        pl_layout = QVBoxLayout(tab_pipeline)
+        pl_layout.setContentsMargins(8, 8, 8, 8)
+        pl_layout.addWidget(self._build_pipeline_group())
+        pl_layout.addWidget(self._build_augment_group())
+        pl_layout.addStretch()
+        tabs.addTab(tab_pipeline, "Pipeline & Augmentation")
+
+        tab_recon = QWidget()
+        rc_layout = QVBoxLayout(tab_recon)
+        rc_layout.setContentsMargins(8, 8, 8, 8)
+        rc_layout.addWidget(self._build_reconstruction_group())
+        rc_layout.addWidget(self._build_voxel_comparison_group())
+        rc_layout.addStretch()
+        tabs.addTab(tab_recon, "Reconstruction & Comparison")
+
+        tab_view = QWidget()
+        vs_layout = QVBoxLayout(tab_view)
+        vs_layout.setContentsMargins(8, 8, 8, 8)
+        vs_layout.addWidget(self._build_view_save_group())
+        vs_layout.addStretch()
+        tabs.addTab(tab_view, "View & Save")
+
+        return tabs
 
     def _build_pipeline_group(self):
         group = QGroupBox("Pipeline")
