@@ -5,7 +5,11 @@ import os
 
 os.environ['XDG_SESSION_TYPE'] = 'x11'
 
+import matplotlib
+matplotlib.use('Agg')
+
 import threading
+import tempfile
 import numpy as np
 import open3d as o3d
 import paleovoxpy as pv
@@ -237,9 +241,9 @@ class PaleoVoxGUI(QMainWindow):
 
         creators_text = (
             "Alan Gabriel Amaro Colin — alan_amaro@ciencias.unam.mx — Facultad de Ciencias, UNAM\n"
-            "Jesus Alberto Díaz Cruz - vertebrata.j@geologia.unam.mx - Faclutad de Ciencias e Instituto  de Geología, UNAM\n"
-            "Author 3 — email@institution.edu — Institution\n"
-            "Author 4 — email@institution.edu — Institution"
+            "Ángel Ángeles Cortés — angel_10@ciencias.unam.mx — Facultad de Ciencias, UNAM\n"
+            "Jair Israel Barrientos Lara — jair@geologia.unam.mx — Instituto de Geología, UNAM\n"
+            "Jesus Alberto Díaz Cruz - vertebrata.j@geologia.unam.mx - Facultad de Ciencias e Instituto  de Geología, UNAM"
         )
         creators_info = QLabel(creators_text)
         creators_info.setWordWrap(True)
@@ -278,6 +282,13 @@ class PaleoVoxGUI(QMainWindow):
         vs_layout.addWidget(self._build_view_save_group())
         vs_layout.addStretch()
         tabs.addTab(tab_view, "View & Save")
+
+        tab_tsne = QWidget()
+        ts_layout = QVBoxLayout(tab_tsne)
+        ts_layout.setContentsMargins(8, 8, 8, 8)
+        ts_layout.addWidget(self._build_tsne_tab())
+        ts_layout.addStretch()
+        tabs.addTab(tab_tsne, "t-SNE Analysis")
 
         return tabs
 
@@ -510,6 +521,60 @@ class PaleoVoxGUI(QMainWindow):
 
         return group
 
+    def _build_tsne_tab(self):
+        group = QGroupBox("t-SNE Visualization — Original vs Deformed")
+        tl = QVBoxLayout(group)
+
+        help_text = QLabel(
+            "Generates a shared t-SNE embedding from the original and current "
+            "voxel grids, displayed side by side. Both arrays must contain "
+            "occupied voxels."
+        )
+        help_text.setWordWrap(True)
+        help_text.setStyleSheet("color: #666; font-size: 11px; margin-bottom: 4px;")
+        tl.addWidget(help_text)
+
+        row1 = QHBoxLayout()
+        row1.addWidget(QLabel("Perplexity:"))
+        self.spin_tsne_pp = QSpinBox()
+        self.spin_tsne_pp.setRange(5, 500)
+        self.spin_tsne_pp.setValue(100)
+        self.spin_tsne_pp.setToolTip("t-SNE perplexity (5–500)")
+        row1.addWidget(self.spin_tsne_pp)
+        row1.addWidget(QLabel("Seed:"))
+        self.spin_tsne_seed = QSpinBox()
+        self.spin_tsne_seed.setRange(0, 9999)
+        self.spin_tsne_seed.setValue(42)
+        self.spin_tsne_seed.setToolTip("Random seed for reproducibility")
+        row1.addWidget(self.spin_tsne_seed)
+        tl.addLayout(row1)
+
+        row2 = QHBoxLayout()
+        row2.addWidget(QLabel("Percentage:"))
+        self.spin_tsne_pct = QDoubleSpinBox()
+        self.spin_tsne_pct.setRange(0.01, 1.00)
+        self.spin_tsne_pct.setSingleStep(0.05)
+        self.spin_tsne_pct.setValue(0.50)
+        self.spin_tsne_pct.setToolTip("Fraction of occupied voxels to sample (0.01–1.00)")
+        row2.addWidget(self.spin_tsne_pct)
+        row2.addWidget(QLabel("Point size:"))
+        self.spin_tsne_size = QDoubleSpinBox()
+        self.spin_tsne_size.setRange(0.1, 10.0)
+        self.spin_tsne_size.setSingleStep(0.5)
+        self.spin_tsne_size.setValue(1.0)
+        self.spin_tsne_size.setToolTip("Scatter marker size")
+        row2.addWidget(self.spin_tsne_size)
+        tl.addLayout(row2)
+
+        row3 = QHBoxLayout()
+        self.btn_tsne = QPushButton("Generate t-SNE")
+        self.btn_tsne.clicked.connect(self._on_generate_tsne)
+        row3.addWidget(self.btn_tsne)
+        row3.addStretch()
+        tl.addLayout(row3)
+
+        return group
+
     def _on_color_changed(self):
         color_map = {
             "Blue": (0.2, 0.2, 0.8),
@@ -591,6 +656,7 @@ class PaleoVoxGUI(QMainWindow):
         self.btn_compare.setEnabled(has_original and has_reconstructed)
         self.btn_save_reconstructed.setEnabled(has_reconstructed)
         self.btn_compare_voxels.setEnabled(has_original_voxel and has_voxel)
+        self.btn_tsne.setEnabled(has_original_voxel and has_voxel)
 
     def _on_browse(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -929,6 +995,58 @@ class PaleoVoxGUI(QMainWindow):
             ).start()
         except Exception as e:
             self._show_error("Voxel Comparison Error", f"Failed to compare voxels:\n{e}")
+
+    def _on_generate_tsne(self):
+        if self.original_voxel is None or self.voxel is None:
+            return
+        try:
+            pp = self.spin_tsne_pp.value()
+            seed = self.spin_tsne_seed.value()
+            percentage = self.spin_tsne_pct.value()
+            size = self.spin_tsne_size.value()
+            self._status(
+                f"Generating t-SNE (perplexity={pp}, percentage={percentage:.2f}, seed={seed})..."
+            )
+            orig_occ = int(np.sum(self.original_voxel > 0))
+            curr_occ = int(np.sum(self.voxel > 0))
+            if orig_occ == 0 or curr_occ == 0:
+                self._show_error("t-SNE Error",
+                               "Both original and current voxels must contain occupied voxels.")
+                return
+
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                tmp_path = tmp.name
+
+            pv.tsne_compare(
+                self.original_voxel, self.voxel,
+                seed=seed, percentage=percentage,
+                pp=pp, size=size, pr=True,
+                save_path=tmp_path
+            )
+
+            dialog = QDialog(self)
+            dialog.setWindowTitle("t-SNE Comparison — Original vs Deformed")
+            dialog.setMinimumSize(900, 460)
+            layout = QVBoxLayout(dialog)
+
+            pixmap = QPixmap(tmp_path)
+            img_label = QLabel()
+            img_label.setPixmap(
+                pixmap.scaled(880, 420, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            )
+            img_label.setAlignment(Qt.AlignCenter)
+            layout.addWidget(img_label)
+
+            btn_close = QPushButton("Close")
+            btn_close.clicked.connect(dialog.accept)
+            layout.addWidget(btn_close)
+
+            dialog.finished.connect(lambda: os.unlink(tmp_path))
+            dialog.exec_()
+
+            self._status("t-SNE comparison complete")
+        except Exception as e:
+            self._show_error("t-SNE Error", f"Failed to generate t-SNE:\n{e}")
 
     def _on_save_reconstructed(self):
         if self.reconstructed_mesh is not None:

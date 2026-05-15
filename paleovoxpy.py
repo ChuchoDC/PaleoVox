@@ -2934,6 +2934,104 @@ def tsne_visualization(voxel_array, seed:int = 42, percentage: float = 0.5, pp:i
     plt.scatter(X_tsne[:, 0], X_tsne[:, 1], s=size, color = color)
     plt.show()
 
+
+def tsne_compare(voxel_original, voxel_deformed, seed: int = 42, percentage: float = 0.5,
+                 pp: int = 100, size: float = 1.0, colors: tuple = ('blue', 'red'),
+                 labels: tuple = ('Original', 'Deformed'), pr: bool = False,
+                 save_path: str = None):
+    """
+    Side-by-side t-SNE comparison of two voxel arrays in a shared embedding space.
+
+    This function projects both the original and deformed voxel grids into a
+    common 2D t-SNE space by concatenating their occupied coordinates, fitting
+    t-SNE once, and splitting the result. This ensures the embeddings are
+    directly comparable. Results are displayed as two side-by-side scatter
+    subplots.
+
+    Parameters
+    ----------
+    voxel_original : numpy.ndarray
+        3D binary voxel array (original / reference).
+    voxel_deformed : numpy.ndarray
+        3D binary voxel array (deformed / augmented).
+    seed : int, default=42
+        Random seed for reproducible t-SNE and sampling.
+    percentage : float, default=0.5
+        Fraction of occupied voxels to sample from each array (0–1).
+    pp : int, default=100
+        Perplexity parameter for t-SNE.
+    size : float, default=1.0
+        Marker size in scatter plots.
+    colors : tuple of str, default=('blue', 'red')
+        Colors for the original and deformed scatter points.
+    labels : tuple of str, default=('Original', 'Deformed')
+        Labels for each subplot title.
+    pr : bool, default=False
+        If True, prints progress information.
+    save_path : str or None, default=None
+        If provided, saves the figure to this file path instead of calling
+        plt.show(). Useful for embedding in GUI applications.
+        Returns the save_path on success.
+
+    Returns
+    -------
+    str or None
+        If save_path is provided, returns the path of the saved image.
+        Otherwise displays the figure via plt.show() and returns None.
+    """
+    from sklearn.manifold import TSNE
+
+    X_orig = np.argwhere(voxel_original == 1)
+    X_def = np.argwhere(voxel_deformed == 1)
+
+    n_orig = X_orig.shape[0]
+    n_def = X_def.shape[0]
+
+    n_sample_orig = int(n_orig * percentage)
+    n_sample_def = int(n_def * percentage)
+
+    rng = np.random.default_rng(seed)
+    idx_orig = rng.choice(n_orig, size=n_sample_orig, replace=False)
+    idx_def = rng.choice(n_def, size=n_sample_def, replace=False)
+
+    X_orig = X_orig[idx_orig]
+    X_def = X_def[idx_def]
+
+    X_all = np.vstack([X_orig, X_def])
+
+    if pr:
+        print(f'Original points: {n_orig} -> {n_sample_orig}')
+        print(f'Deformed points: {n_def} -> {n_sample_def}')
+        print(f'Total points for t-SNE: {X_all.shape[0]}')
+        print('Generating t-SNE on combined data...')
+
+    tsne = TSNE(n_components=2, random_state=seed, perplexity=pp)
+    X_all_tsne = tsne.fit_transform(X_all)
+
+    X_orig_tsne = X_all_tsne[:n_sample_orig]
+    X_def_tsne = X_all_tsne[n_sample_orig:]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
+    ax1.scatter(X_orig_tsne[:, 0], X_orig_tsne[:, 1], s=size, color=colors[0])
+    ax1.set_title(labels[0])
+    ax1.set_xlabel('t-SNE 1')
+    ax1.set_ylabel('t-SNE 2')
+
+    ax2.scatter(X_def_tsne[:, 0], X_def_tsne[:, 1], s=size, color=colors[1])
+    ax2.set_title(labels[1])
+    ax2.set_xlabel('t-SNE 1')
+    ax2.set_ylabel('t-SNE 2')
+
+    fig.suptitle('t-SNE Comparison: Original vs Deformed', fontsize=14, fontweight='bold')
+    plt.tight_layout()
+
+    if save_path is not None:
+        fig.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.close(fig)
+        return save_path
+
+    plt.show()
+
 """## Save Functions"""
 
 def save_mesh(mesh, path: str):
