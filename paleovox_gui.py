@@ -421,6 +421,13 @@ class PaleoVoxGUI(QMainWindow):
         frac_row.addWidget(self.btn_fracture)
         al.addLayout(frac_row)
 
+        save_row = QHBoxLayout()
+        self.btn_save_deformed_voxels = QPushButton("Save Deformed Voxels")
+        self.btn_save_deformed_voxels.clicked.connect(self._on_save_deformed_voxels)
+        save_row.addWidget(self.btn_save_deformed_voxels)
+        save_row.addStretch()
+        al.addLayout(save_row)
+
         return group
 
     def _build_view_save_group(self):
@@ -657,6 +664,7 @@ class PaleoVoxGUI(QMainWindow):
         self.btn_save_reconstructed.setEnabled(has_reconstructed)
         self.btn_compare_voxels.setEnabled(has_original_voxel and has_voxel)
         self.btn_tsne.setEnabled(has_original_voxel and has_voxel)
+        self.btn_save_deformed_voxels.setEnabled(has_voxel)
 
     def _on_browse(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -862,6 +870,24 @@ class PaleoVoxGUI(QMainWindow):
         except Exception as e:
             self._show_error("Fracture Error", f"Failed to apply fracture:\n{e}")
 
+    def _on_save_deformed_voxels(self):
+        if self.voxel is None:
+            return
+        try:
+            default_name = ""
+            if self.file_path:
+                base = os.path.splitext(os.path.basename(self.file_path))[0]
+                default_name = f"{base}_deformed.npy"
+            path, _ = QFileDialog.getSaveFileName(
+                self, "Save Deformed Voxels", default_name,
+                "NumPy Files (*.npy)"
+            )
+            if path:
+                pv.save_voxel(self.voxel, path)
+                self._status(f"Deformed voxels saved to {path}")
+        except Exception as e:
+            self._show_error("Save Error", f"Failed to save deformed voxels:\n{e}")
+
     def on_view_mesh(self):
         mesh = self.reconstructed_mesh if self.reconstructed_mesh is not None else self.mesh
         if mesh is not None:
@@ -1037,9 +1063,16 @@ class PaleoVoxGUI(QMainWindow):
             img_label.setAlignment(Qt.AlignCenter)
             layout.addWidget(img_label)
 
+            btn_row = QHBoxLayout()
+            btn_save_img = QPushButton("Save Image...")
+            btn_save_img.clicked.connect(
+                lambda: self._on_save_tsne_image(tmp_path)
+            )
+            btn_row.addWidget(btn_save_img)
             btn_close = QPushButton("Close")
             btn_close.clicked.connect(dialog.accept)
-            layout.addWidget(btn_close)
+            btn_row.addWidget(btn_close)
+            layout.addLayout(btn_row)
 
             dialog.finished.connect(lambda: os.unlink(tmp_path))
             dialog.exec_()
@@ -1047,6 +1080,24 @@ class PaleoVoxGUI(QMainWindow):
             self._status("t-SNE comparison complete")
         except Exception as e:
             self._show_error("t-SNE Error", f"Failed to generate t-SNE:\n{e}")
+
+    def _on_save_tsne_image(self, source_path):
+        default_name = ""
+        if self.file_path:
+            base = os.path.splitext(os.path.basename(self.file_path))[0]
+            default_name = f"{base}_tsne.png"
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save t-SNE Image", default_name,
+            "PNG Image (*.png);;JPEG Image (*.jpg)"
+        )
+        if not path:
+            return
+        try:
+            import shutil
+            shutil.copy2(source_path, path)
+            self._status(f"t-SNE image saved to {path}")
+        except Exception as e:
+            self._show_error("Save Error", f"Failed to save t-SNE image:\n{e}")
 
     def _on_save_reconstructed(self):
         if self.reconstructed_mesh is not None:
