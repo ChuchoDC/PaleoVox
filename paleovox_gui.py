@@ -3,7 +3,8 @@
 import sys
 import os
 
-os.environ['XDG_SESSION_TYPE'] = 'x11'
+if sys.platform.startswith('linux'):
+    os.environ['XDG_SESSION_TYPE'] = 'x11'
 
 import matplotlib
 matplotlib.use('Agg')
@@ -34,7 +35,7 @@ class DropZone(QLabel):
         super().__init__(parent)
         self.setAcceptDrops(True)
         self.setAlignment(Qt.AlignCenter)
-        self.setText("Drop .ply or .obj file here\n\n— or click to browse —")
+        self.setText("Drop .ply, .obj or .npy file here\n\n— or click to browse —")
         self.setWordWrap(True)
         self.setMinimumHeight(140)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
@@ -61,7 +62,7 @@ class DropZone(QLabel):
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
             for url in event.mimeData().urls():
-                if url.toLocalFile().lower().endswith(('.ply', '.obj')):
+                if url.toLocalFile().lower().endswith(('.ply', '.obj', '.npy')):
                     event.acceptProposedAction()
                     self._apply_style("hover")
                     return
@@ -73,15 +74,15 @@ class DropZone(QLabel):
     def dropEvent(self, event):
         for url in event.mimeData().urls():
             path = url.toLocalFile()
-            if path.lower().endswith(('.ply', '.obj')):
+            if path.lower().endswith(('.ply', '.obj', '.npy')):
                 self._apply_style("loaded")
                 self.file_dropped.emit(path)
                 return
 
     def mousePressEvent(self, event):
         path, _ = QFileDialog.getOpenFileName(
-            self, "Open 3D Mesh", "",
-            "3D Mesh Files (*.ply *.obj);;PLY Files (*.ply);;OBJ Files (*.obj)"
+            self, "Open 3D Mesh or Voxel Grid", "",
+            "Supported Files (*.ply *.obj *.npy);;3D Mesh Files (*.ply *.obj);;PLY Files (*.ply);;OBJ Files (*.obj);;Voxel Grid Files (*.npy)"
         )
         if path:
             self._apply_style("loaded")
@@ -163,7 +164,7 @@ class PaleoVoxGUI(QMainWindow):
 
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
-        self._status("Ready — Drag & drop a .ply or .obj file to begin")
+        self._status("Ready — Drag & drop a .ply, .obj or .npy file to begin")
 
     def _build_left_panel(self):
         panel = QWidget()
@@ -289,6 +290,13 @@ class PaleoVoxGUI(QMainWindow):
         ts_layout.addWidget(self._build_tsne_tab())
         ts_layout.addStretch()
         tabs.addTab(tab_tsne, "t-SNE Analysis")
+
+        tab_2d = QWidget()
+        d2_layout = QVBoxLayout(tab_2d)
+        d2_layout.setContentsMargins(8, 8, 8, 8)
+        d2_layout.addWidget(self._build_2d_perspectives_group())
+        d2_layout.addStretch()
+        tabs.addTab(tab_2d, "2D Perspectives")
 
         return tabs
 
@@ -582,6 +590,108 @@ class PaleoVoxGUI(QMainWindow):
 
         return group
 
+    def _build_2d_perspectives_group(self):
+        group = QGroupBox("2D Perspective View")
+        layout = QVBoxLayout(group)
+
+        help_text = QLabel(
+            "Project all occupied voxels onto a 2D plane (X-ray view). "
+            "Useful for inspecting shape, density, and distribution from "
+            "different angles."
+        )
+        help_text.setWordWrap(True)
+        help_text.setStyleSheet("color: #666; font-size: 11px; margin-bottom: 4px;")
+        layout.addWidget(help_text)
+
+        axis_row = QHBoxLayout()
+        axis_row.addWidget(QLabel("Axis:"))
+        self.combo_2d_axis = QComboBox()
+        self.combo_2d_axis.addItems(["XY", "XZ", "YZ"])
+        self.combo_2d_axis.setCurrentIndex(0)
+        self.combo_2d_axis.setToolTip("Projection plane")
+        axis_row.addWidget(self.combo_2d_axis)
+        axis_row.addStretch()
+        layout.addLayout(axis_row)
+
+        single_row1 = QHBoxLayout()
+        single_row1.addWidget(QLabel("Color:"))
+        self.combo_2d_color = QComboBox()
+        self.combo_2d_color.addItems(["Blue", "Red", "Green", "Orange", "Purple", "Cyan", "Yellow", "White", "Gray"])
+        self.combo_2d_color.setCurrentIndex(0)
+        single_row1.addWidget(self.combo_2d_color)
+        single_row1.addWidget(QLabel("Marker:"))
+        self.combo_2d_marker = QComboBox()
+        self.combo_2d_marker.addItems(["o", ".", "^", "s", "*", "+", "x"])
+        self.combo_2d_marker.setCurrentIndex(0)
+        single_row1.addWidget(self.combo_2d_marker)
+        single_row1.addWidget(QLabel("Size:"))
+        self.spin_2d_size = QDoubleSpinBox()
+        self.spin_2d_size.setRange(0.1, 10.0)
+        self.spin_2d_size.setSingleStep(0.5)
+        self.spin_2d_size.setValue(1.0)
+        single_row1.addWidget(self.spin_2d_size)
+        single_row1.addStretch()
+        layout.addLayout(single_row1)
+
+        self.btn_2d_single = QPushButton("Generate 2D Perspective")
+        self.btn_2d_single.clicked.connect(self._on_generate_2d_single)
+        layout.addWidget(self.btn_2d_single)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(sep)
+
+        comp_label = QLabel("Comparison: Original (Blue) vs Current (Red)")
+        comp_label.setStyleSheet("font-weight: bold; margin-top: 4px;")
+        layout.addWidget(comp_label)
+
+        comp_row1 = QHBoxLayout()
+        comp_row1.addWidget(QLabel("Orig color:"))
+        self.combo_2d_cmp_color1 = QComboBox()
+        self.combo_2d_cmp_color1.addItems(["Blue", "Red", "Green", "Orange", "Purple", "Cyan", "Yellow", "White", "Gray"])
+        self.combo_2d_cmp_color1.setCurrentIndex(0)
+        comp_row1.addWidget(self.combo_2d_cmp_color1)
+        comp_row1.addWidget(QLabel("Marker:"))
+        self.combo_2d_cmp_marker1 = QComboBox()
+        self.combo_2d_cmp_marker1.addItems(["o", ".", "^", "s", "*", "+", "x"])
+        self.combo_2d_cmp_marker1.setCurrentIndex(0)
+        comp_row1.addWidget(self.combo_2d_cmp_marker1)
+        comp_row1.addWidget(QLabel("Size:"))
+        self.spin_2d_cmp_size1 = QDoubleSpinBox()
+        self.spin_2d_cmp_size1.setRange(0.1, 10.0)
+        self.spin_2d_cmp_size1.setSingleStep(0.5)
+        self.spin_2d_cmp_size1.setValue(1.0)
+        comp_row1.addWidget(self.spin_2d_cmp_size1)
+        comp_row1.addStretch()
+        layout.addLayout(comp_row1)
+
+        comp_row2 = QHBoxLayout()
+        comp_row2.addWidget(QLabel("Curr color:"))
+        self.combo_2d_cmp_color2 = QComboBox()
+        self.combo_2d_cmp_color2.addItems(["Blue", "Red", "Green", "Orange", "Purple", "Cyan", "Yellow", "White", "Gray"])
+        self.combo_2d_cmp_color2.setCurrentIndex(1)
+        comp_row2.addWidget(self.combo_2d_cmp_color2)
+        comp_row2.addWidget(QLabel("Marker:"))
+        self.combo_2d_cmp_marker2 = QComboBox()
+        self.combo_2d_cmp_marker2.addItems(["o", ".", "^", "s", "*", "+", "x"])
+        self.combo_2d_cmp_marker2.setCurrentIndex(2)
+        comp_row2.addWidget(self.combo_2d_cmp_marker2)
+        comp_row2.addWidget(QLabel("Size:"))
+        self.spin_2d_cmp_size2 = QDoubleSpinBox()
+        self.spin_2d_cmp_size2.setRange(0.1, 10.0)
+        self.spin_2d_cmp_size2.setSingleStep(0.5)
+        self.spin_2d_cmp_size2.setValue(1.0)
+        comp_row2.addWidget(self.spin_2d_cmp_size2)
+        comp_row2.addStretch()
+        layout.addLayout(comp_row2)
+
+        self.btn_2d_comparison = QPushButton("Generate Comparison")
+        self.btn_2d_comparison.clicked.connect(self._on_generate_2d_comparison)
+        layout.addWidget(self.btn_2d_comparison)
+
+        return group
+
     def _on_color_changed(self):
         color_map = {
             "Blue": (0.2, 0.2, 0.8),
@@ -665,11 +775,13 @@ class PaleoVoxGUI(QMainWindow):
         self.btn_compare_voxels.setEnabled(has_original_voxel and has_voxel)
         self.btn_tsne.setEnabled(has_original_voxel and has_voxel)
         self.btn_save_deformed_voxels.setEnabled(has_voxel)
+        self.btn_2d_single.setEnabled(has_voxel)
+        self.btn_2d_comparison.setEnabled(has_original_voxel and has_voxel)
 
     def _on_browse(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, "Open 3D Mesh", "",
-            "3D Mesh Files (*.ply *.obj);;PLY Files (*.ply);;OBJ Files (*.obj)"
+            self, "Open 3D Mesh or Voxel Grid", "",
+            "Supported Files (*.ply *.obj *.npy);;3D Mesh Files (*.ply *.obj);;PLY Files (*.ply);;OBJ Files (*.obj);;Voxel Grid Files (*.npy)"
         )
         if path:
             self.on_load_mesh(path)
@@ -690,7 +802,7 @@ class PaleoVoxGUI(QMainWindow):
         self.fracture_pattern = None
         self.lbl_recon_info.setText("Reconstructed: —")
         self.drop_zone._apply_style("idle")
-        self.drop_zone.setText("Drop .ply or .obj file here\n\n— or click to browse —")
+        self.drop_zone.setText("Drop .ply, .obj or .npy file here\n\n— or click to browse —")
         self._update_info_panel()
         self._update_button_states()
         self._status("Reset — ready for new file")
@@ -701,6 +813,28 @@ class PaleoVoxGUI(QMainWindow):
     def on_load_mesh(self, path):
         try:
             self.file_path = path
+            fname = os.path.basename(path)
+
+            if path.lower().endswith('.npy'):
+                self._status(f"Loading voxel grid from {fname}...")
+                self.voxel = pv.load_voxel(path)
+                self.original_voxel = self.voxel.copy()
+                self.mesh = None
+                self.original_mesh = None
+                self.reconstructed_mesh = None
+                self.bounds = None
+                self.scale_info = None
+                self.fracture_pattern = None
+
+                self.drop_zone.setText(f"Loaded:\n{fname}")
+                self.drop_zone._apply_style("loaded")
+
+                self._update_info_panel()
+                self._update_button_states()
+                occupied = int(np.sum(self.voxel > 0))
+                self._status(f"Loaded {fname} — {self.voxel.shape} grid, {occupied:,} occupied voxels")
+                return
+
             self.mesh, min_bound, max_bound, dimensions = pv.load_mesh(
                 path, return_bounds=True
             )
@@ -712,7 +846,6 @@ class PaleoVoxGUI(QMainWindow):
             self.scale_info = None
             self.fracture_pattern = None
 
-            fname = os.path.basename(path)
             self.drop_zone.setText(f"Loaded:\n{fname}")
             self.drop_zone._apply_style("loaded")
 
@@ -722,7 +855,7 @@ class PaleoVoxGUI(QMainWindow):
             tris = len(self.mesh.triangles)
             self._status(f"Loaded {fname} — {verts:,} vertices, {tris:,} triangles")
         except Exception as e:
-            self._show_error("Load Error", f"Failed to load mesh:\n{e}")
+            self._show_error("Load Error", f"Failed to load file:\n{e}")
 
     def on_convert_to_voxels(self):
         if self.mesh is None:
@@ -1098,6 +1231,133 @@ class PaleoVoxGUI(QMainWindow):
             self._status(f"t-SNE image saved to {path}")
         except Exception as e:
             self._show_error("Save Error", f"Failed to save t-SNE image:\n{e}")
+
+    def _on_generate_2d_single(self):
+        if self.voxel is None:
+            return
+        try:
+            axis_str = self.combo_2d_axis.currentText()
+            axis_map = {"XY": ["x", "y"], "XZ": ["x", "z"], "YZ": ["y", "z"]}
+            axis = axis_map[axis_str]
+            color = self.combo_2d_color.currentText().lower()
+            marker = self.combo_2d_marker.currentText()
+            size = self.spin_2d_size.value()
+
+            self._status(f"Generating 2D perspective ({axis_str})...")
+
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                tmp_path = tmp.name
+
+            pv.plot_2d_perspective(
+                self.voxel, axis=axis, color=color,
+                marker=marker, size=size, save_path=tmp_path
+            )
+
+            dialog = QDialog(self)
+            dialog.setWindowTitle(f"2D Perspective — {axis_str} View")
+            dialog.setMinimumSize(640, 540)
+            layout = QVBoxLayout(dialog)
+
+            pixmap = QPixmap(tmp_path)
+            img_label = QLabel()
+            img_label.setPixmap(
+                pixmap.scaled(620, 500, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            )
+            img_label.setAlignment(Qt.AlignCenter)
+            layout.addWidget(img_label)
+
+            btn_row = QHBoxLayout()
+            btn_save_img = QPushButton("Save Image...")
+            btn_save_img.clicked.connect(
+                lambda: self._on_save_2d_image(tmp_path)
+            )
+            btn_row.addWidget(btn_save_img)
+            btn_close = QPushButton("Close")
+            btn_close.clicked.connect(dialog.accept)
+            btn_row.addWidget(btn_close)
+            layout.addLayout(btn_row)
+
+            dialog.finished.connect(lambda: os.unlink(tmp_path))
+            dialog.exec_()
+
+            self._status(f"2D perspective ({axis_str}) complete")
+        except Exception as e:
+            self._show_error("2D Perspective Error", f"Failed to generate 2D perspective:\n{e}")
+
+    def _on_generate_2d_comparison(self):
+        if self.original_voxel is None or self.voxel is None:
+            return
+        try:
+            axis_str = self.combo_2d_axis.currentText()
+            axis_map = {"XY": ["x", "y"], "XZ": ["x", "z"], "YZ": ["y", "z"]}
+            axis = axis_map[axis_str]
+            colors = [self.combo_2d_cmp_color1.currentText().lower(),
+                      self.combo_2d_cmp_color2.currentText().lower()]
+            markers = [self.combo_2d_cmp_marker1.currentText(),
+                       self.combo_2d_cmp_marker2.currentText()]
+            sizes = [self.spin_2d_cmp_size1.value(),
+                     self.spin_2d_cmp_size2.value()]
+
+            self._status(f"Generating 2D comparison ({axis_str})...")
+
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                tmp_path = tmp.name
+
+            pv.plot_2d_perspective_2samples(
+                self.original_voxel, self.voxel,
+                axis=axis, colors=colors, markers=markers,
+                sizes=sizes, labels=["Original", "Current"],
+                save_path=tmp_path
+            )
+
+            dialog = QDialog(self)
+            dialog.setWindowTitle(f"2D Comparison — {axis_str} View")
+            dialog.setMinimumSize(640, 540)
+            layout = QVBoxLayout(dialog)
+
+            pixmap = QPixmap(tmp_path)
+            img_label = QLabel()
+            img_label.setPixmap(
+                pixmap.scaled(620, 500, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            )
+            img_label.setAlignment(Qt.AlignCenter)
+            layout.addWidget(img_label)
+
+            btn_row = QHBoxLayout()
+            btn_save_img = QPushButton("Save Image...")
+            btn_save_img.clicked.connect(
+                lambda: self._on_save_2d_image(tmp_path)
+            )
+            btn_row.addWidget(btn_save_img)
+            btn_close = QPushButton("Close")
+            btn_close.clicked.connect(dialog.accept)
+            btn_row.addWidget(btn_close)
+            layout.addLayout(btn_row)
+
+            dialog.finished.connect(lambda: os.unlink(tmp_path))
+            dialog.exec_()
+
+            self._status(f"2D comparison ({axis_str}) complete")
+        except Exception as e:
+            self._show_error("2D Comparison Error", f"Failed to generate 2D comparison:\n{e}")
+
+    def _on_save_2d_image(self, source_path):
+        default_name = ""
+        if self.file_path:
+            base = os.path.splitext(os.path.basename(self.file_path))[0]
+            default_name = f"{base}_2d.png"
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save 2D Image", default_name,
+            "PNG Image (*.png);;JPEG Image (*.jpg)"
+        )
+        if not path:
+            return
+        try:
+            import shutil
+            shutil.copy2(source_path, path)
+            self._status(f"2D image saved to {path}")
+        except Exception as e:
+            self._show_error("Save Error", f"Failed to save 2D image:\n{e}")
 
     def _on_save_reconstructed(self):
         if self.reconstructed_mesh is not None:

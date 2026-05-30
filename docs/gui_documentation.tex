@@ -1,0 +1,574 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{caption}
+
+\definecolor{paleoblue}{RGB}{74,158,255}
+\definecolor{paleogreen}{RGB}{76,175,80}
+\definecolor{paleored}{RGB}{200,50,50}
+\definecolor{darkgray}{RGB}{80,80,80}
+\definecolor{codebg}{RGB}{245,245,245}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=paleoblue,
+  urlcolor=paleoblue,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small PaleoVox GUI Documentation}
+\fancyhead[R]{\small v1.0.6}
+\fancyfoot[C]{\thepage}
+
+\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}[\color{paleoblue}\titlerule]
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{gray!40},
+  breaklines=true,
+  showstringspaces=false,
+  columns=flexible,
+}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+
+{\Huge\bfseries PaleoVox}\\[0.5cm]
+{\Large Graphical User Interface}\\[0.5cm]
+{\Large Documentation}\\[1.5cm]
+
+{\large Version 1.0.6}\\[2cm]
+
+\begin{tabular}{rl}
+\textbf{Date:} & \today \\
+\textbf{Authors:} & Alan Gabriel Amaro Colin \\
+                 & Ángel Ángeles Cortés \\
+                 & Jair Israel Barrientos Lara \\
+                 & Jesus Alberto Díaz Cruz \\
+\textbf{Institution:} & Facultad de Ciencias \& Instituto de Geología, UNAM \\
+\end{tabular}
+
+\vfill
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% =============================================================================
+\section{Introduction}
+% =============================================================================
+
+\subsection{What is PaleoVox?}
+
+PaleoVox is a Python-based application for 3D fossil data augmentation using voxel representations. It provides a graphical interface for:
+
+\begin{itemize}
+  \item Converting 3D meshes to voxel grids
+  \item Applying morphological operations (dilation/erosion)
+  \item Simulating taphonomic damage (deformation, erosion, rotation, fracture)
+  \item Reconstructing high-quality meshes from voxels
+  \item Visualizing and comparing original vs. processed data
+  \item Dimensionality reduction analysis via t-SNE
+  \item 2D perspective projections
+\end{itemize}
+
+\subsection{Supported File Formats}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llp{7cm}}
+\toprule
+\textbf{Extension} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\texttt{.ply} & Mesh & Polygon File Format with vertex colors \& normals \\
+\texttt{.obj} & Mesh & Wavefront OBJ, widely compatible \\
+\texttt{.npy}  & Voxels & NumPy binary array format for voxel grids \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{System Requirements}
+\begin{itemize}
+  \item Python 3.8 or later
+  \item PyQt5, Open3D, NumPy, SciPy, Matplotlib, scikit-learn
+  \item X11 display server (Linux)
+  \item Minimum screen resolution: 1100$\times$700
+\end{itemize}
+
+\subsection{Launching PaleoVox}
+To start the application, run from the project directory:
+\begin{lstlisting}[language=bash]
+python3 paleovox_gui.py
+\end{lstlisting}
+
+\newpage
+
+% =============================================================================
+\section{Interface Overview}
+% =============================================================================
+
+The PaleoVox window is divided into two main panels separated by a movable splitter:
+
+\begin{description}
+  \item[\textbf{Left Panel} (\~{}350px)] Contains the logo, file Drop Zone, Browse button, File Info panel, Reset button, and About link.
+  \item[\textbf{Right Panel} (\~{}700px)] Contains five tabbed workspaces for the core workflow.
+\end{description}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lp{10cm}}
+\toprule
+\textbf{Tab} & \textbf{Purpose} \\
+\midrule
+Pipeline \& Augmentation & Core workflow: mesh loading, voxel conversion, dilation, and four augmentation operations \\
+Reconstruction \& Comparison & Mesh reconstruction from voxels, visual comparison of meshes and voxels \\
+View \& Save & 3D visualization and file export \\
+t-SNE Analysis & Dimensionality reduction to compare original vs. deformed voxel distributions \\
+2D Perspectives & 2D projection scatter plots of voxel data \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =============================================================================
+\section{Left Panel --- File Management}
+% =============================================================================
+
+\subsection{Drop Zone}
+
+The Drop Zone is a large dashed-bordered area that accepts 3D files via drag-and-drop or click-to-browse. It has three visual states:
+
+\begin{description}
+  \item[\textbf{Idle} (gray)] No file loaded. Displays: ``Drop .ply, .obj or .npy file here''.
+  \item[\textbf{Hover} (blue)] A supported file is being dragged over the zone.
+  \item[\textbf{Loaded} (green)] A file has been successfully loaded. Shows the filename.
+\end{description}
+
+\subsection{Browse Button}
+
+Clicking ``Browse...'' opens a file dialog filtered to supported formats. The same dialog is opened when clicking directly on the Drop Zone text.
+
+\subsection{File Info Panel}
+
+Once a file is loaded, the File Info panel displays:
+
+\begin{itemize}
+  \item \textbf{Path:} Full file path (with home directory abbreviated as \texttt{\~{}})
+  \item \textbf{Vertices:} Number of mesh vertices (``---'' for \texttt{.npy} files)
+  \item \textbf{Triangles:} Number of mesh triangles (``---'' for \texttt{.npy} files)
+  \item \textbf{Voxel shape:} Dimensions of the voxel grid (e.g., \texttt{(256, 256, 256)})
+  \item \textbf{Occupied voxels:} Count of non-zero voxels
+\end{itemize}
+
+\subsection{Reset All}
+
+Clears all data and returns the application to its initial state. All visualizations, augmentations, and reconstructions are discarded.
+
+\subsection{More about PaleoVox}
+
+Opens an About dialog showing the application description and creator credits.
+
+% =============================================================================
+\section{Tab 1: Pipeline \& Augmentation}
+% =============================================================================
+
+This tab contains two grouped sections: the Pipeline and the Augmentations.
+
+\subsection{Pipeline Section}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llp{8cm}}
+\toprule
+\textbf{Control} & \textbf{Type} & \textbf{Description} \\
+\midrule
+Load Mesh & Button & Re-loads the currently loaded file \\
+npoints & SpinBox (100--200000) & Number of points sampled from mesh surface \\
+dim & SpinBox (32--512) & Voxel grid resolution (N$\times$N$\times$N) \\
+Mesh $\rightarrow$ Voxels & Button & Converts the current mesh to a voxel grid \\
+Iterations & SpinBox (1--10) & Dilation iterations for morphological closing \\
+Dilate Voxels & Button & Applies binary dilation to the voxel array \\
+Voxels $\rightarrow$ Mesh & Button & Reconstructs a mesh from the current voxels \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Workflow}
+The typical pipeline order is:
+\begin{enumerate}
+  \item \textbf{Load Mesh} --- Drag/set a file. Mesh info appears in the left panel.
+  \item \textbf{Mesh $\rightarrow$ Voxels} --- Convert the mesh to a 3D binary voxel grid. Set \texttt{npoints} (sampling density) and \texttt{dim} (resolution) before converting. Higher \texttt{npoints} captures more surface detail; higher \texttt{dim} creates finer grids at the cost of memory and speed.
+  \item \textbf{Dilate Voxels} --- (Optional) Fill interior gaps and close surface holes. Higher iterations produce more aggressive filling.
+  \item \textbf{Voxels $\rightarrow$ Mesh} --- Reconstruct a triangle mesh from voxels using Poisson surface reconstruction with post-processing.
+\end{enumerate}
+
+\subsection{Augmentations Section}
+
+All augmentations operate on the \textbf{current voxel grid}. The original voxel grid is preserved separately for comparison.
+
+\subsubsection{Deformation}
+
+Simulates sediment compaction along a chosen axis.
+
+\begin{itemize}
+  \item \textbf{Axis:} X, Y, or Z (default: Z for vertical compaction)
+  \item \textbf{Factor:} 0.10--0.99 (default: 0.85). Lower values $\rightarrow$ stronger compression. A factor of 1.0 means no change.
+\end{itemize}
+
+\subsubsection{Erosion}
+
+Simulates partial degradation by removing voxels beyond a random cut point along a chosen axis.
+
+\begin{itemize}
+  \item \textbf{Axis:} X, Y, or Z
+  \item \textbf{Increment:} 0.01--1.0 (default: 0.5). Controls minimum preservation. Higher values keep more material.
+\end{itemize}
+
+\subsubsection{Rotation}
+
+Rigid 3D rotation of the voxel grid about its geometric center. Nearest-neighbor interpolation preserves binary values.
+
+\begin{itemize}
+  \item \textbf{X/Y/Z (degrees):} $-180$ to $180$. Positive values follow the right-hand rule.
+\end{itemize}
+
+\subsubsection{Fracture}
+
+Stochastic fracture propagation through the voxel volume. Simulates cracks by propagating from a starting point through occupied voxels.
+
+\begin{itemize}
+  \item \textbf{Max pos:} 1--50 (default: 10). Controls randomness. Lower values $\rightarrow$ more directed fractures; higher values $\rightarrow$ more wandering.
+  \item \textbf{Return both:} If checked, also extracts the fracture pattern as a separate grid. Status bar reports pattern voxel count.
+\end{itemize}
+
+\subsubsection{Save Deformed Voxels}
+
+Exports the current voxel grid as a \texttt{.npy} file. Useful for saving intermediate states or results for later use.
+
+% =============================================================================
+\section{Tab 2: Reconstruction \& Comparison}
+% =============================================================================
+
+\subsection{Reconstruction \& Comparison Group}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llp{8cm}}
+\toprule
+\textbf{Control} & \textbf{Type} & \textbf{Description} \\
+\midrule
+Reconstructed: & Label & Displays vertex/triangle count of the reconstructed mesh \\
+Reconstruct from Voxels & Button & Runs Poisson surface reconstruction from the current voxels \\
+Compare Original vs Reconstructed & Button & Opens a 3D viewer with the original and reconstructed meshes \\
+Show: & ComboBox & Filters the comparison: Both, Original Only, or Reconstructed Only \\
+Save Reconstructed Mesh & Button & Exports the reconstructed mesh as \texttt{.ply} or \texttt{.obj} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Reconstruction Details}
+Reconstruction uses high-quality Poisson surface reconstruction with:
+\begin{itemize}
+  \item Morphological solidification (closing + hole filling)
+  \item Positional jitter to break grid regularity
+  \item Statistical outlier removal (SOR)
+  \item Density-based filtering to remove low-confidence geometry
+  \item Connected component filtering to remove floating artifacts
+  \item Quadric edge collapse decimation (if needed, capped at 100K triangles)
+  \item Taubin smoothing for surface quality
+\end{itemize}
+
+If the original mesh scale information is available (from a mesh-loaded workflow), the reconstructed mesh is scaled and translated to match the original bounds.
+
+\subsection{Voxel Comparison Group}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llp{7cm}}
+\toprule
+\textbf{Control} & \textbf{Type} & \textbf{Description} \\
+\midrule
+Original: --- Current: --- & Label & Voxel counts for original and current grids \\
+Show: & ComboBox & Visualization filter: Both, Original Only, Current Only \\
+Compare Voxels & Button & Opens a 3D viewer with overlaid voxel grids \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The voxel comparison visualizes original (blue) and current (red) voxel grids as 3D point clouds. This directly shows which regions were added or removed by augmentations.
+
+% =============================================================================
+\section{Tab 3: View \& Save}
+% =============================================================================
+
+\subsection{Color Selector}
+
+A global color picker that sets the display color for both mesh and voxel 3D viewers. Available colors: Blue, Red, Green, Orange, Purple, Cyan, Yellow, White, Gray (default: Blue).
+
+\subsection{View Buttons}
+
+\begin{itemize}
+  \item \textbf{View Mesh} --- Opens an Open3D interactive 3D viewer showing the current or reconstructed mesh. Supports rotation, pan, zoom.
+  \item \textbf{View Voxels} --- Opens an Open3D viewer showing the current voxel grid as a voxelized point cloud.
+\end{itemize}
+
+Both viewers open in separate windows and run in background threads, so the main GUI remains responsive.
+
+\subsection{Save Buttons}
+
+\begin{itemize}
+  \item \textbf{Save Mesh} --- Exports the current mesh as \texttt{.ply} or \texttt{.obj}.
+  \item \textbf{Save Voxel} --- Exports the current voxel grid as a \texttt{.npy} NumPy file.
+\end{itemize}
+
+Default filenames are derived from the source file name (e.g., \texttt{fossil\_processed.ply}).
+
+% =============================================================================
+\section{Tab 4: t-SNE Analysis}
+% =============================================================================
+
+t-Distributed Stochastic Neighbor Embedding (t-SNE) projects the 3D coordinates of occupied voxels into a 2D space for visualization. It reveals clustering patterns and distribution differences between original and deformed voxel grids.
+
+\subsection{Parameters}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lllp{6cm}}
+\toprule
+\textbf{Parameter} & \textbf{Range} & \textbf{Default} & \textbf{Description} \\
+\midrule
+Perplexity & 5--500 & 100 & Balance between local/global structure \\
+Seed & 0--9999 & 42 & Random seed for reproducibility \\
+Percentage & 0.01--1.00 & 0.50 & Fraction of occupied voxels to sample \\
+Point size & 0.1--10.0 & 1.0 & Scatter marker size \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Output}
+
+Clicking ``Generate t-SNE'' produces a dialog with two side-by-side scatter plots:
+\begin{itemize}
+  \item \textbf{Left:} Original voxels in blue
+  \item \textbf{Right:} Current (deformed) voxels in red
+\end{itemize}
+
+The embeddings are computed in a shared space by concatenating both point sets, fitting t-SNE once, then splitting the result. This ensures direct comparability.
+
+\textbf{Note:} Both the original and current voxel grids must contain occupied voxels. An error dialog appears if either is empty.
+
+\subsection{Saving}
+
+The ``Save Image...'' button in the dialog exports the figure as PNG or JPEG. The temp file is automatically cleaned up when the dialog is closed.
+
+% =============================================================================
+\section{Tab 5: 2D Perspectives}
+% =============================================================================
+
+This tab projects all occupied voxels onto a 2D plane, creating an X-ray view of the voxel distribution. It is useful for quickly inspecting shape, density, and orientation from different angles.
+
+\subsection{Single Perspective View}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lllp{7cm}}
+\toprule
+\textbf{Control} & \textbf{Type} & \textbf{Default} & \textbf{Description} \\
+\midrule
+Axis & ComboBox & XY & Projection plane (XY, XZ, or YZ) \\
+Color & ComboBox & Blue & Scatter point color \\
+Marker & ComboBox & o & Marker style (o, ., \^{}, s, *, +, x) \\
+Size & SpinBox & 1.0 & Marker size (0.1--10.0) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Click ``Generate 2D Perspective'' to produce a scatter plot projection of the current voxel grid onto the selected plane. For example, XY projection shows the object as seen from above, collapsing all Z-depth information into a single view.
+
+\subsection{Comparison View (Original vs Current)}
+
+Overlays both the original and current voxel projections on the same axes, with independently customizable colors, markers, and sizes for each.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llp{7cm}}
+\toprule
+\textbf{Control} & \textbf{Default} & \textbf{Description} \\
+\midrule
+Orig color / Curr color & Blue / Red & Colors for original and current voxels \\
+Marker (each) & o / \^{} & Marker styles for each set \\
+Size (each) & 1.0 / 1.0 & Marker sizes for each set \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Click ``Generate Comparison'' to produce an overlaid scatter plot. A legend distinguishes the two datasets. This is ideal for evaluating the effect of augmentations.
+
+\subsection{Saving}
+
+Both dialogs include a ``Save Image...'' button to export the plot as PNG or JPEG.
+
+% =============================================================================
+\section{Working with \texttt{.npy} Files Directly}
+% =============================================================================
+
+PaleoVox supports loading pre-computed voxel grids directly from \texttt{.npy} files, skipping the mesh conversion step.
+
+\subsection{Loading}
+Drag a \texttt{.npy} file onto the Drop Zone or use Browse. The voxel grid is loaded immediately.
+
+\subsection{State After Loading}
+\begin{itemize}
+  \item \textbf{Voxels:} Set to the loaded array. Original voxels are also captured.
+  \item \textbf{Mesh:} Not available. You must reconstruct from voxels first.
+  \item \textbf{Augmentations:} All enabled immediately (they operate on voxels).
+  \item \textbf{Scale info:} Not available. Reconstructed mesh uses unit scale.
+\end{itemize}
+
+\subsection{Enabling Mesh Features}
+Click ``Reconstruct from Voxels'' or ``Voxels $\rightarrow$ Mesh'' to generate a mesh. After reconstruction, all mesh features (View Mesh, Save Mesh, mesh comparison) become available.
+
+\subsection{Common Use Case}
+\begin{enumerate}
+  \item Load a \texttt{.npy} file saved from a previous PaleoVox session.
+  \item Apply augmentations (deformation, erosion, etc.).
+  \item Reconstruct a mesh.
+  \item Save the reconstructed mesh as \texttt{.ply} or \texttt{.obj}.
+  \item Save the augmented voxels as \texttt{.npy} for later use.
+\end{enumerate}
+
+% =============================================================================
+\section{Button State Logic}
+% =============================================================================
+
+PaleoVox dynamically enables and disables buttons based on the current application state to prevent invalid operations. The logic follows the principle that each operation requires its inputs to be present.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Button} & \textbf{Start} & \textbf{Mesh} & \textbf{Voxels} & \textbf{Recon} & \textbf{.npy} \\
+\midrule
+Load Mesh                   & -- & Y & Y & Y & Y \\
+Mesh $\rightarrow$ Voxels  & -- & Y & -- & -- & -- \\
+Dilate Voxels               & -- & -- & Y & Y & Y \\
+Voxels $\rightarrow$ Mesh  & -- & -- & Y & Y & Y \\
+\addlinespace
+All Augmentations           & -- & -- & Y & Y & Y \\
+\midrule
+View Mesh                   & -- & Y & -- & Y & -- \\
+View Voxels                 & -- & -- & Y & Y & Y \\
+Save Mesh                   & -- & Y & -- & Y & -- \\
+Save Voxel                  & -- & -- & Y & Y & Y \\
+\midrule
+Reconstruct from Voxels     & -- & -- & Y & Y & Y \\
+Compare Orig vs Recon       & -- & -- & -- & Y* & -- \\
+Save Reconstructed          & -- & -- & -- & Y & -- \\
+Compare Voxels              & -- & -- & Y** & Y** & Y** \\
+Generate t-SNE              & -- & -- & Y** & Y** & Y** \\
+\midrule
+2D Single Perspective       & -- & -- & Y & Y & Y \\
+2D Comparison               & -- & -- & Y** & Y** & Y** \\
+\bottomrule
+\multicolumn{6}{l}{\footnotesize Start = no file; Mesh = .ply/.obj loaded; Voxels = voxelized; Recon = mesh rebuilt; .npy = .npy loaded} \\
+\multicolumn{6}{l}{\footnotesize Y = enabled; -- = disabled; * = requires original mesh; ** = requires original voxels} \\
+\end{tabular}
+\normalsize
+\end{table}
+
+% =============================================================================
+\section{Error Handling}
+% =============================================================================
+
+PaleoVox provides user-friendly error handling throughout:
+
+\begin{description}
+  \item[\textbf{Load Errors}] If a file cannot be read (corrupted, wrong format), an error dialog appears with details. The application does not crash.
+  \item[\textbf{Operation Errors}] If a backend operation fails (e.g., reconstruction of an empty voxel grid), an error dialog explains the issue.
+  \item[\textbf{Save Errors}] If a file cannot be written (e.g., read-only directory), an error dialog shows the cause.
+  \item[\textbf{Unsupported Files}] Drag-and-drop silently ignores unsupported file types. The file dialog filters prevent selection of unsupported formats.
+  \item[\textbf{Empty Data}] Viewing an empty voxel grid shows a status message rather than opening a blank viewer.
+\end{description}
+
+% =============================================================================
+\section{Tips \& Best Practices}
+% =============================================================================
+
+\subsection{Mesh Preparation}
+\begin{itemize}
+  \item Ensure meshes are clean (no degenerate triangles, non-manifold edges). Open3D handles minor issues but poorly formed meshes may produce unexpected results.
+  \item Meshes should be watertight for best reconstruction quality.
+\end{itemize}
+
+\subsection{Voxel Parameters}
+\begin{itemize}
+  \item \textbf{npoints:} Increase for meshes with fine surface detail. Values above 100K may cause slower conversion.
+  \item \textbf{dim:} Higher resolution (e.g., 512) captures finer detail but uses significantly more memory. 128 or 256 is suitable for most fossils.
+\end{itemize}
+
+\subsection{Augmentation Workflow}
+\begin{itemize}
+  \item Apply augmentations in any order. Each operates on the current voxel state.
+  \item Use ``Reset All'' to discard all augmentations and start over.
+  \item Save intermediate voxel states (\texttt{.npy}) if you want to revert to a specific point.
+\end{itemize}
+
+\subsection{Reconstruction Quality}
+\begin{itemize}
+  \item Reconstruction works best on solid (dilated) voxel grids. Use dilation before reconstruction to close gaps.
+  \item For \texttt{.npy}-loaded voxels without scale info, the reconstructed mesh uses arbitrary units. Scale in your target application if needed.
+\end{itemize}
+
+\subsection{Visual Comparison}
+\begin{itemize}
+  \item Use the Voxel Comparison view to see exactly which regions were affected by augmentations.
+  \item Use the Mesh Comparison view to evaluate reconstruction accuracy vs. the original.
+  \item Use t-SNE to detect distribution-level changes that may not be visually obvious.
+  \item Use 2D Perspectives for quick shape inspections from different angles.
+\end{itemize}
+
+% =============================================================================
+\section{Keyboard Shortcuts \& Interactions}
+% =============================================================================
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Action} & \textbf{Method} \\
+\midrule
+Load file & Drag \& drop or click Browse \\
+Reset application & Click ``Reset All'' \\
+3D viewer (rotate/pan/zoom) & Standard Open3D mouse controls \\
+Close dialogs & Click ``Close'' or press Escape \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Open3D Viewer Controls}
+\begin{itemize}
+  \item \textbf{Left mouse drag:} Rotate the view
+  \item \textbf{Middle mouse drag / Scroll:} Zoom in/out
+  \item \textbf{Right mouse drag / Ctrl + Left drag:} Pan
+  \item \textbf{R:} Reset view to default
+  \item \textbf{W:} Toggle wireframe mode
+  \item \textbf{S:} Toggle shading mode
+\end{itemize}
+
+\end{document}

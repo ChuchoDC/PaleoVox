@@ -2508,7 +2508,7 @@ def propagator_fracture(voxel_grid, max_position:int=10, return_both: bool = Fal
 ### 2D simple projections
 """
 
-def plot_2d_perspective(voxel_array, axis=['x', 'y'], color='blue', marker='o', size=1.0):
+def plot_2d_perspective(voxel_array, axis=['x', 'y'], color='blue', marker='o', size=1.0, save_path=None):
     """
     Plot a 2D projection of a 3D voxel array along specified axes.
 
@@ -2677,11 +2677,18 @@ def plot_2d_perspective(voxel_array, axis=['x', 'y'], color='blue', marker='o', 
 
     plt.xlabel('Axis: {}'.format(str.upper(axis[0])))
     plt.ylabel('Axis: {}'.format(str.upper(axis[1])))
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.close()
+        return save_path
+
     plt.show()
 
 def plot_2d_perspective_2samples(voxel_array_1, voxel_array_2, axis=['x', 'y'],
                                   colors=['blue', 'red'], markers=['o', 'o'],
-                                  sizes=[1.0, 1.0], labels = ['V1', 'V2']):
+                                  sizes=[1.0, 1.0], labels = ['V1', 'V2'],
+                                  save_path=None):
     """
     Plot 2D projections of two 3D voxel arrays on the same axes for comparison.
 
@@ -2882,6 +2889,12 @@ def plot_2d_perspective_2samples(voxel_array_1, voxel_array_2, axis=['x', 'y'],
     plt.xlabel('Axis: {}'.format(str.upper(axis[0])))
     plt.ylabel('Axis: {}'.format(str.upper(axis[1])))
     plt.legend()
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.close()
+        return save_path
+
     plt.show()
 
 """### T-SNE Visualization"""

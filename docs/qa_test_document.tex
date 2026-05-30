@@ -1,0 +1,854 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+\definecolor{paleoblue}{RGB}{74,158,255}
+\definecolor{paleogreen}{RGB}{76,175,80}
+\definecolor{paleored}{RGB}{200,50,50}
+\definecolor{darkgray}{RGB}{80,80,80}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=paleoblue,
+  urlcolor=paleoblue,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small PaleoVox QA Test Document}
+\fancyhead[R]{\small v1.0.6}
+\fancyfoot[C]{\thepage}
+
+\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}[\color{paleoblue}\titlerule]
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+
+\newenvironment{testcase}[4]{%
+  \smallskip
+  \noindent\textbf{Test ID:} #1 \hfill \textbf{Area:} #2 \\
+  \textbf{Title:} #3 \hfill \textbf{Priority:} #4
+  \begin{description}[leftmargin=2em,style=nextline]
+    \item[\textbf{Preconditions:}]
+}{%
+    \item[\textbf{Steps:}]
+    \item[\textbf{Expected Result:}]
+    \item[\textbf{Status:}] \rule{3cm}{0.4pt} \hspace{1em} \textbf{Date:} \rule{3cm}{0.4pt}
+    \item[\textbf{Notes:}]
+  \end{description}
+  \smallskip
+}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+
+{\Huge\bfseries PaleoVox}\\[0.5cm]
+{\Large Quality Assurance Test Document}\\[1.5cm]
+
+{\large Fossil Voxel Augmentation GUI}\\[0.5cm]
+{\large Version 1.0.6}\\[2cm]
+
+\begin{tabular}{rl}
+\textbf{Date:} & \today \\
+\textbf{Authors:} & Alan Gabriel Amaro Colin \\
+                 & Ángel Ángeles Cortés \\
+                 & Jair Israel Barrientos Lara \\
+                 & Jesus Alberto Díaz Cruz \\
+\textbf{Institution:} & Facultad de Ciencias \& Instituto de Geología, UNAM \\
+\end{tabular}
+
+\vfill
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% =============================================================================
+\section{Introduction}
+% =============================================================================
+
+\subsection{Purpose}
+This document defines the Quality Assurance test plan for the PaleoVox graphical user interface (GUI). Its purpose is to ensure that all user-facing functionality operates correctly, consistently, and handles errors gracefully before each release.
+
+\subsection{Scope}
+The test plan covers the entire PaleoVox GUI, including:
+\begin{itemize}
+  \item File loading via drag-and-drop, browse dialog, and the Load Mesh button
+  \item Support for \texttt{.ply}, \texttt{.obj}, and \texttt{.npy} file formats
+  \item Pipeline workflow: mesh loading $\rightarrow$ voxel conversion $\rightarrow$ morphological operations $\rightarrow$ mesh reconstruction
+  \item Four augmentation operations: deformation, erosion, rotation, and fracture
+  \item Visualization: 3D mesh view, 3D voxel view, mesh comparison, voxel comparison
+  \item Analysis: t-SNE dimensionality reduction, 2D perspective projections
+  \item File saving: meshes (\texttt{.ply}, \texttt{.obj}) and voxels (\texttt{.npy})
+  \item Button state logic (enabled/disabled based on workflow state)
+  \item Error handling and user feedback
+  \item Reset and About functionality
+\end{itemize}
+
+\subsection{Test Environment}
+\begin{itemize}
+  \item \textbf{Operating System:} Linux (X11 session)
+  \item \textbf{Python:} 3.8+ with PyQt5, Open3D, NumPy, SciPy, Matplotlib, scikit-learn
+  \item \textbf{Window Manager:} Any X11-compatible WM (GNOME, KDE, XFCE, etc.)
+  \item \textbf{Screen Resolution:} 1100$\times$700 minimum
+  \item \textbf{Test Data:} Representative \texttt{.ply}, \texttt{.obj}, and \texttt{.npy} files
+\end{itemize}
+
+\newpage
+
+% =============================================================================
+\section{Test Case Catalog}
+% =============================================================================
+
+% -----------------------------------------------------------------------------
+\subsection{File Loading \& Drop Zone}
+% -----------------------------------------------------------------------------
+
+\begin{testcase}{FL-001}{File Loading}{Drag \& drop \texttt{.ply} file onto Drop Zone}{High}
+  \item No file is currently loaded.
+  \item Drag a valid \texttt{.ply} file from the file manager onto the Drop Zone.
+  \item The Drop Zone border turns blue on hover, then green on drop. The file loads; File Info panel shows vertex/triangle counts. Status bar confirms load.
+\end{testcase}
+
+\begin{testcase}{FL-002}{File Loading}{Drag \& drop \texttt{.obj} file onto Drop Zone}{High}
+  \item No file is currently loaded.
+  \item Drag a valid \texttt{.obj} file from the file manager onto the Drop Zone.
+  \item The Drop Zone accepts the file; status turns green. Mesh loads correctly. File Info updated.
+\end{testcase}
+
+\begin{testcase}{FL-003}{File Loading}{Drag \& drop \texttt{.npy} file onto Drop Zone}{High}
+  \item No file is currently loaded.
+  \item Drag a valid \texttt{.npy} file (3D voxel array) onto the Drop Zone.
+  \item Drop Zone accepts the file. Voxel array loads (no mesh). File Info shows voxel shape and occupied count. Mesh vertex/triangle labels show ``---". Augmentation buttons enabled; mesh-dependent buttons disabled.
+\end{testcase}
+
+\begin{testcase}{FL-004}{File Loading}{Drag \& drop unsupported file type onto Drop Zone}{Medium}
+  \item No file is currently loaded.
+  \item Drag a \texttt{.txt}, \texttt{.png}, or other unsupported file onto the Drop Zone.
+  \item The file is rejected (ignored). Drop Zone remains in idle state. No error or status change.
+\end{testcase}
+
+\begin{testcase}{FL-005}{File Loading}{Browse button opens file dialog with correct filters}{High}
+  \item No file is currently loaded.
+  \item Click the ``Browse...'' button.
+  \item File dialog opens with title ``Open 3D Mesh or Voxel Grid''. Filter options include ``Supported Files (*.ply *.obj *.npy)'', ``3D Mesh Files'', ``PLY'', ``OBJ'', and ``Voxel Grid Files''.
+\end{testcase}
+
+\begin{testcase}{FL-006}{File Loading}{Load via Browse selecting a \texttt{.ply} file}{High}
+  \item No file is currently loaded.
+  \item Click Browse, select a valid \texttt{.ply} file, click Open.
+  \item File loads successfully. Same behavior as FL-001.
+\end{testcase}
+
+\begin{testcase}{FL-007}{File Loading}{Load via Browse selecting a \texttt{.npy} file}{High}
+  \item No file is currently loaded.
+  \item Click Browse, select a valid \texttt{.npy} voxel file, click Open.
+  \item Voxel array loads. Same behavior as FL-003.
+\end{testcase}
+
+\begin{testcase}{FL-008}{File Loading}{Click on Drop Zone text opens file dialog}{Medium}
+  \item No file is currently loaded.
+  \item Click directly on the Drop Zone text/label area.
+  \item File dialog opens (same as Browse button behavior).
+\end{testcase}
+
+\begin{testcase}{FL-009}{File Loading}{Load Mesh button re-loads current file}{Low}
+  \item A mesh file is already loaded (e.g., via Browse).
+  \item Go to Pipeline tab, click ``Load Mesh''.
+  \item The same file is reloaded. File Info and button states are refreshed.
+\end{testcase}
+
+\begin{testcase}{FL-010}{File Loading}{Drag \& drop visual state transitions}{Medium}
+  \item No file is currently loaded.
+  \item Hover over the Drop Zone with a valid \texttt{.ply} file (do not drop); then drag away; then drop the file.
+  \item Hover $\rightarrow$ blue dashed border. Drag leave $\rightarrow$ gray idle border. Drop $\rightarrow$ green dashed border with file name displayed.
+\end{testcase}
+
+\begin{testcase}{FL-011}{File Loading}{Load corrupted/invalid file}{High}
+  \item A test file that is not a valid mesh or voxel grid is available.
+  \item Attempt to load the corrupted file via Browse.
+  \item An error dialog appears with title ``Load Error'' and a descriptive error message. Application does not crash. Previous state preserved.
+\end{testcase}
+
+% -----------------------------------------------------------------------------
+\subsection{File Info Panel}
+% -----------------------------------------------------------------------------
+
+\begin{testcase}{FI-001}{File Info}{Info panel shows mesh statistics after \texttt{.ply} load}{Medium}
+  \item Load a valid \texttt{.ply} mesh file.
+  \item Observe the File Info panel on the left sidebar.
+  \item ``Path'' shows the file path (home abbreviated as \texttt{\~{}}). ``Vertices'' and ``Triangles'' show correct counts. ``Voxel shape'' and ``Occupied voxels'' show ``---''.
+\end{testcase}
+
+\begin{testcase}{FI-002}{File Info}{Info panel shows voxel statistics after \texttt{.npy} load}{Medium}
+  \item Load a valid \texttt{.npy} voxel file (e.g., $(128,128,128)$ with $15243$ occupied).
+  \item Observe the File Info panel.
+  \item ``Vertices'' and ``Triangles'' show ``---''. ``Voxel shape'' shows the shape tuple. ``Occupied voxels'' shows correct count.
+\end{testcase}
+
+\begin{testcase}{FI-003}{File Info}{Info panel updated after voxelization}{Medium}
+  \item Load a mesh, then click ``Mesh $\rightarrow$ Voxels''.
+  \item Observe the File Info panel.
+  \item ``Voxel shape'' and ``Occupied voxels'' are populated. Vertices/triangles remain from the mesh.
+\end{testcase}
+
+% -----------------------------------------------------------------------------
+\subsection{Pipeline Tab}
+% -----------------------------------------------------------------------------
+
+\begin{testcase}{PL-001}{Pipeline}{Mesh $\rightarrow$ Voxels with default parameters}{High}
+  \item A mesh file is loaded.
+  \item Set npoints=100000, dim=256. Click ``Mesh $\rightarrow$ Voxels''.
+  \item Voxel grid of shape $(256,256,256)$ is created. Status bar confirms conversion. Augmentation buttons become enabled. Original voxel saved for comparison.
+\end{testcase}
+
+\begin{testcase}{PL-002}{Pipeline}{Mesh $\rightarrow$ Voxels with custom parameters}{Medium}
+  \item A mesh file is loaded.
+  \item Set npoints=50000, dim=64. Click ``Mesh $\rightarrow$ Voxels''.
+  \item Voxel grid of shape $(64,64,64)$ is created. Occupied voxel count varies with parameters.
+\end{testcase}
+
+\begin{testcase}{PL-003}{Pipeline}{Mesh $\rightarrow$ Voxels boundary values}{Low}
+  \item A mesh file is loaded.
+  \item Test npoints=100 (min), npoints=200000 (max), dim=32 (min), dim=512 (max).
+  \item All boundary values produce a valid voxel grid without crashes or hangs.
+\end{testcase}
+
+\begin{testcase}{PL-004}{Pipeline}{Dilate Voxels with default iterations}{High}
+  \item Voxels exist (after Mesh $\rightarrow$ Voxels).
+  \item Set iterations=2. Click ``Dilate Voxels''.
+  \item Voxel array is morphologically closed. Occupied voxel count increases. Status bar confirms. Mesh is NOT updated until explicit reconstruction.
+\end{testcase}
+
+\begin{testcase}{PL-005}{Pipeline}{Dilate Voxels with various iterations}{Medium}
+  \item Voxels exist.
+  \item Test iterations=1, 5, and 10.
+  \item Higher iterations produce more aggressive filling. No error at boundary values.
+\end{testcase}
+
+\begin{testcase}{PL-006}{Pipeline}{Voxels $\rightarrow$ Mesh reconstruction}{High}
+  \item Voxels exist (after conversion or \texttt{.npy} load).
+  \item Click ``Voxels $\rightarrow$ Mesh''.
+  \item A reconstructed triangle mesh is generated. Vertices and triangles displayed in File Info and Reconstruction info label. Status bar confirms.
+\end{testcase}
+
+\begin{testcase}{PL-007}{Pipeline}{Full pipeline workflow (end-to-end)}{High}
+  \item No file loaded.
+  \item Load \texttt{.ply} mesh $\rightarrow$ Mesh $\rightarrow$ Voxels $\rightarrow$ Dilate $\rightarrow$ Voxels $\rightarrow$ Mesh.
+  \item All steps complete without errors. Final mesh is reconstructed from dilated voxels. File Info updated at each step.
+\end{testcase}
+
+\begin{testcase}{PL-008}{Pipeline}{Pipeline buttons disabled when no mesh/voxels}{High}
+  \item No file loaded (fresh start).
+  \item Observe Pipeline tab buttons.
+  \item All buttons except ``Load Mesh'' are disabled. After loading mesh: Load Mesh, Mesh $\rightarrow$ Voxels enabled; Dilate, Voxels $\rightarrow$ Mesh disabled. After voxelization: all enabled.
+\end{testcase}
+
+% -----------------------------------------------------------------------------
+\subsection{Augmentations}
+% -----------------------------------------------------------------------------
+
+\begin{testcase}{AU-001}{Augmentation}{Deformation on each axis}{High}
+  \item Voxels exist. original\_voxel has been captured.
+  \item For each axis (X, Y, Z), set factor=0.85. Click Apply next to Deformation.
+  \item Occupied voxel count changes. ``Current'' count in Voxel Comparison updates. Original voxel count unchanged. Status bar confirms.
+\end{testcase}
+
+\begin{testcase}{AU-002}{Augmentation}{Deformation with min/max factor}{Medium}
+  \item Voxels exist.
+  \item Test factor=0.10 (min, heavy compression) and factor=0.99 (max, minimal compression).
+  \item Both produce valid results without error. Heavier compression reduces occupied count significantly.
+\end{testcase}
+
+\begin{testcase}{AU-003}{Augmentation}{Erosion on each axis}{High}
+  \item Voxels exist.
+  \item For X, Y, Z axes: set increment=0.5. Click Apply next to Erosion.
+  \item Occupied voxel count decreases on each axis. Random cut removes a portion. Current voxel count updates.
+\end{testcase}
+
+\begin{testcase}{AU-004}{Augmentation}{Erosion with min/max increment}{Medium}
+  \item Voxels exist.
+  \item Test increment=0.01 (min, almost no removal) and increment=1.0 (max, heavy removal).
+  \item Both produce valid results. Min increment preserves most voxels. Max removes a large portion.
+\end{testcase}
+
+\begin{testcase}{AU-005}{Augmentation}{Rotation with zero angles}{Low}
+  \item Voxels exist.
+  \item Set all rotation angles (X, Y, Z) to 0. Click Apply.
+  \item Voxel array is unchanged (identity rotation). Occupied count should match.
+\end{testcase}
+
+\begin{testcase}{AU-006}{Augmentation}{Rotation with non-zero angles}{Medium}
+  \item Voxels exist.
+  \item Set X=30°, Y=45°, Z=90°. Click Apply.
+  \item Rotation is applied. Occupied count may change slightly due to nearest-neighbor interpolation. No errors.
+\end{testcase}
+
+\begin{testcase}{AU-007}{Augmentation}{Rotation with max angles}{Low}
+  \item Voxels exist.
+  \item Set all angles to 180°. Click Apply.
+  \item Rotation completes. Object should be flipped (upside-down).
+\end{testcase}
+
+\begin{testcase}{AU-008}{Augmentation}{Fracture with return\_both=False}{High}
+  \item Voxels exist.
+  \item Uncheck ``Return both''. Set max\_pos=10. Click Apply.
+  \item Fracture pattern is subtracted from voxel array. Occupied count decreases. Status bar shows count only.
+\end{testcase}
+
+\begin{testcase}{AU-009}{Augmentation}{Fracture with return\_both=True}{Medium}
+  \item Voxels exist.
+  \item Check ``Return both''. Set max\_pos=5. Click Apply.
+  \item voxel and fracture\_pattern are separated. Status bar shows pattern voxel count. Fracture lines are isolated.
+\end{testcase}
+
+\begin{testcase}{AU-010}{Augmentation}{Fracture max\_pos boundary values}{Low}
+  \item Voxels exist.
+  \item Test max\_pos=1 (straight fracture) and max\_pos=50 (random wandering).
+  \item Both produce valid results. Low value = more directed; high value = more random.
+\end{testcase}
+
+\begin{testcase}{AU-011}{Augmentation}{Save Deformed Voxels to \texttt{.npy}}{High}
+  \item Voxels exist (preferably after an augmentation).
+  \item Click ``Save Deformed Voxels''. Choose a file path and save.
+  \item Voxel array is saved as \texttt{.npy}. Status bar confirms the path. File can be reloaded successfully.
+\end{testcase}
+
+\begin{testcase}{AU-012}{Augmentation}{Augmentations chain sequentially}{Medium}
+  \item Voxels exist.
+  \item Apply Deformation $\rightarrow$ Erosion $\rightarrow$ Rotation $\rightarrow$ Fracture.
+  \item Each augmentation operates on the current voxel state. All complete without error. Final state reflects all augmentations.
+\end{testcase}
+
+\begin{testcase}{AU-013}{Augmentation}{Augmentation buttons disabled without voxels}{Medium}
+  \item Load a mesh only (no voxelization).
+  \item Observe augmentation controls.
+  \item All Apply buttons and ``Save Deformed Voxels'' are disabled.
+\end{testcase}
+
+% -----------------------------------------------------------------------------
+\subsection{View \& Save Tab}
+% -----------------------------------------------------------------------------
+
+\begin{testcase}{VS-001}{View/Save}{View Mesh opens Open3D viewer}{High}
+  \item A mesh is loaded (from \texttt{.ply} or after reconstruction).
+  \item Select a color from the dropdown (e.g., Red). Click ``View Mesh''.
+  \item An Open3D viewer window opens (1024$\times$768) showing the mesh in the chosen color. GUI remains responsive.
+\end{testcase}
+
+\begin{testcase}{VS-002}{View/Save}{View Voxels opens Open3D viewer}{High}
+  \item Voxels exist.
+  \item Select Cyan color. Click ``View Voxels''.
+  \item An Open3D viewer shows the voxel grid as a point cloud in the chosen color. GUI remains responsive.
+\end{testcase}
+
+\begin{testcase}{VS-003}{View/Save}{View Voxels with no occupied voxels}{Low}
+  \item An empty voxel array exists (all zeros). (May require corner-case setup.)
+  \item Click ``View Voxels''.
+  \item Status bar shows ``No occupied voxels to display''. No viewer opens. No error dialog.
+\end{testcase}
+
+\begin{testcase}{VS-004}{View/Save}{Color picker changes display color}{Medium}
+  \item Voxels or mesh exist.
+  \item Cycle through each color in the dropdown. View Mesh or View Voxels after each change.
+  \item Each color is applied correctly in the viewer. Color selection persists for subsequent views.
+\end{testcase}
+
+\begin{testcase}{VS-005}{View/Save}{Save Mesh to \texttt{.ply}}{High}
+  \item A mesh exists.
+  \item Click ``Save Mesh''. Choose a path ending in \texttt{.ply}. Save.
+  \item Mesh is saved. Status bar confirms. File can be reopened.
+\end{testcase}
+
+\begin{testcase}{VS-006}{View/Save}{Save Mesh to \texttt{.obj}}{Medium}
+  \item A mesh exists.
+  \item Click ``Save Mesh''. Choose a path ending in \texttt{.obj}. Save.
+  \item Mesh is saved as \texttt{.obj}. File is valid.
+\end{testcase}
+
+\begin{testcase}{VS-007}{View/Save}{Save Voxel to \texttt{.npy}}{High}
+  \item Voxels exist.
+  \item Click ``Save Voxel''. Choose a path. Save.
+  \item Voxel array saved as \texttt{.npy}. Status bar confirms. Can be reloaded with FL-003/FL-007.
+\end{testcase}
+
+\begin{testcase}{VS-008}{View/Save}{Save with default filename derived from source}{Low}
+  \item A mesh file named \texttt{fossil.ply} is loaded.
+  \item Click ``Save Mesh'' and observe the suggested filename, then ``Save Voxel'' (after voxelization).
+  \item Save Mesh suggests \texttt{fossil\_processed.ply}. Save Voxel suggests \texttt{fossil\_voxel.npy}.
+\end{testcase}
+
+% -----------------------------------------------------------------------------
+\subsection{Reconstruction \& Comparison Tab}
+% -----------------------------------------------------------------------------
+
+\begin{testcase}{RC-001}{Recon/Comp}{Reconstruct from Voxels}{High}
+  \item Voxels exist but no reconstructed mesh.
+  \item Click ``Reconstruct from Voxels''.
+  \item Mesh is reconstructed. Reconstruction info label updated (vertices, triangles). ``Save Reconstructed Mesh'' button enabled. ``Compare Original vs Reconstructed'' enabled if original mesh exists.
+\end{testcase}
+
+\begin{testcase}{RC-002}{Recon/Comp}{Reconstruct from \texttt{.npy}-loaded voxels}{High}
+  \item A \texttt{.npy} file is loaded (no original mesh).
+  \item Click ``Reconstruct from Voxels''.
+  \item Reconstruction succeeds. Since no original mesh, ``Compare Original vs Reconstructed'' remains disabled. Mesh view and save work.
+\end{testcase}
+
+\begin{testcase}{RC-003}{Recon/Comp}{Compare Original vs Reconstructed --- Both}{High}
+  \item Original mesh and reconstructed mesh both exist.
+  \item Select ``Both'' from the show dropdown. Click ``Compare Original vs Reconstructed''.
+  \item Open3D viewer opens with original (blue) and reconstructed (red) overlaid. Title shows ``Original (Blue) vs Reconstructed (Red)''.
+\end{testcase}
+
+\begin{testcase}{RC-004}{Recon/Comp}{Compare Original vs Reconstructed --- Original Only}{Medium}
+  \item Original mesh and reconstructed mesh both exist.
+  \item Select ``Original Only''. Click compare.
+  \item Viewer shows only the original mesh in blue. Title reflects ``Original Only''.
+\end{testcase}
+
+\begin{testcase}{RC-005}{Recon/Comp}{Compare Original vs Reconstructed --- Reconstructed Only}{Medium}
+  \item Original mesh and reconstructed mesh both exist.
+  \item Select ``Reconstructed Only''. Click compare.
+  \item Viewer shows only the reconstructed mesh in red.
+\end{testcase}
+
+\begin{testcase}{RC-006}{Recon/Comp}{Compare Voxels --- Both}{High}
+  \item Original voxels and current voxels both exist (after an augmentation).
+  \item Select ``Both''. Click ``Compare Voxels''.
+  \item Open3D viewer shows original (blue) and current (red) voxel grids overlaid. Voxel counts in info label are correct.
+\end{testcase}
+
+\begin{testcase}{RC-007}{Recon/Comp}{Compare Voxels --- Original Only}{Medium}
+  \item Original voxels and current voxels both exist.
+  \item Select ``Original Only''. Click compare.
+  \item Only original voxels shown in blue.
+\end{testcase}
+
+\begin{testcase}{RC-008}{Recon/Comp}{Compare Voxels --- Current Only}{Medium}
+  \item Original voxels and current voxels both exist.
+  \item Select ``Current Only''. Click compare.
+  \item Only current voxels shown in red.
+\end{testcase}
+
+\begin{testcase}{RC-009}{Recon/Comp}{Voxel comparison info label}{Medium}
+  \item Original voxels exist (10000 occupied). Apply erosion. Current voxels now have 8000 occupied.
+  \item Observe the ``Original: --- Current: ---'' label in Voxel Comparison group.
+  \item Label reads ``Original: 10,000 voxels   Current: 8,000 voxels''.
+\end{testcase}
+
+\begin{testcase}{RC-010}{Recon/Comp}{Save Reconstructed Mesh}{High}
+  \item A reconstructed mesh exists.
+  \item Click ``Save Reconstructed Mesh''. Choose a path and save.
+  \item Mesh saved. Status bar confirms. Default filename derived from source.
+\end{testcase}
+
+% -----------------------------------------------------------------------------
+\subsection{t-SNE Analysis Tab}
+% -----------------------------------------------------------------------------
+
+\begin{testcase}{TS-001}{t-SNE}{Generate t-SNE with default parameters}{High}
+  \item Both original\_voxel and voxel exist and have occupied voxels.
+  \item Use default params (perplexity=100, seed=42, percentage=0.50, size=1.0). Click ``Generate t-SNE''.
+  \item A dialog opens showing the t-SNE scatter plot (two side-by-side subplots). Dialog has Save Image and Close buttons. Status bar confirms completion.
+\end{testcase}
+
+\begin{testcase}{TS-002}{t-SNE}{Generate t-SNE with custom parameters}{Medium}
+  \item Voxels exist.
+  \item Set perplexity=30, seed=9999, percentage=0.75, size=2.0. Click generate.
+  \item t-SNE generates with custom parameters. Different perplexity produces different embedding. No error.
+\end{testcase}
+
+\begin{testcase}{TS-003}{t-SNE}{t-SNE parameter boundary values}{Low}
+  \item Voxels exist.
+  \item Test perplexity=5 (min), perplexity=500 (max), percentage=0.01 (min), percentage=1.00 (max).
+  \item All boundary values produce valid results without crash.
+\end{testcase}
+
+\begin{testcase}{TS-004}{t-SNE}{Error when no occupied voxels}{Medium}
+  \item Voxels exist but both original and current have zero occupied voxels (edge case).
+  \item Click ``Generate t-SNE''.
+  \item Error dialog: ``Both original and current voxels must contain occupied voxels.'' No crash.
+\end{testcase}
+
+\begin{testcase}{TS-005}{t-SNE}{Save t-SNE image from dialog}{Medium}
+  \item t-SNE dialog is open.
+  \item Click ``Save Image...''. Choose a path (PNG). Save.
+  \item Image saved to chosen path. Status bar confirms.
+\end{testcase}
+
+\begin{testcase}{TS-006}{t-SNE}{Close t-SNE dialog without saving}{Low}
+  \item t-SNE dialog is open.
+  \item Click ``Close''.
+  \item Dialog closes. Temp file is cleaned up. GUI state unchanged.
+\end{testcase}
+
+\begin{testcase}{TS-007}{t-SNE}{Button disabled without original voxels}{Medium}
+  \item Load a mesh and convert to voxels (original = current). Then load a new mesh.
+  \item Observe ``Generate t-SNE'' button state after each state change.
+  \item Button enabled only when both original\_voxel and voxel are not None.
+\end{testcase}
+
+% -----------------------------------------------------------------------------
+\subsection{2D Perspectives Tab}
+% -----------------------------------------------------------------------------
+
+\begin{testcase}{D2-001}{2D Persp}{Generate single 2D perspective --- XY view}{High}
+  \item Voxels exist.
+  \item Select Axis=XY, Color=Blue, Marker=o, Size=1.0. Click ``Generate 2D Perspective''.
+  \item Dialog opens showing the XY projection scatter plot. Axes labeled X and Y. Save Image and Close buttons present.
+\end{testcase}
+
+\begin{testcase}{D2-002}{2D Persp}{Generate single 2D perspective --- XZ view}{Medium}
+  \item Voxels exist.
+  \item Select Axis=XZ. Click generate.
+  \item Dialog shows XZ projection. Axes labeled X and Z.
+\end{testcase}
+
+\begin{testcase}{D2-003}{2D Persp}{Generate single 2D perspective --- YZ view}{Medium}
+  \item Voxels exist.
+  \item Select Axis=YZ. Click generate.
+  \item Dialog shows YZ projection. Axes labeled Y and Z.
+\end{testcase}
+
+\begin{testcase}{D2-004}{2D Persp}{Single perspective with different colors}{Low}
+  \item Voxels exist.
+  \item Test each color option (Blue, Red, Green, Orange, Purple, Cyan, Yellow, White, Gray).
+  \item Each color renders correctly in the scatter plot.
+\end{testcase}
+
+\begin{testcase}{D2-005}{2D Persp}{Single perspective with different markers}{Low}
+  \item Voxels exist.
+  \item Test each marker option (o, ., \^{}, s, *, +, x).
+  \item Each marker renders correctly.
+\end{testcase}
+
+\begin{testcase}{D2-006}{2D Persp}{Single perspective marker size}{Low}
+  \item Voxels exist.
+  \item Test size=0.1 (min) and size=10.0 (max).
+  \item Min size produces tiny points; max size produces large points. Both functional.
+\end{testcase}
+
+\begin{testcase}{D2-007}{2D Persp}{Generate comparison (original vs current)}{High}
+  \item Both original\_voxel and voxel exist.
+  \item Set Axis=XY. Customize colors/markers/sizes for both. Click ``Generate Comparison''.
+  \item Dialog opens showing overlaid scatter plot. Original in color1/marker1, current in color2/marker2. Legend shows ``Original'' and ``Current''.
+\end{testcase}
+
+\begin{testcase}{D2-008}{2D Persp}{Comparison with different axes}{Medium}
+  \item Voxels exist.
+  \item Generate comparison for XZ and YZ views.
+  \item Both projections work correctly. Axes are properly labeled.
+\end{testcase}
+
+\begin{testcase}{D2-009}{2D Persp}{Save 2D image from dialog}{Medium}
+  \item 2D perspective dialog is open.
+  \item Click ``Save Image...''. Choose path. Save.
+  \item Image saved correctly. Status bar confirms.
+\end{testcase}
+
+\begin{testcase}{D2-010}{2D Persp}{Button states for 2D perspectives}{Medium}
+  \item Test with: (a) no voxels, (b) voxels exist but no original, (c) both exist.
+  \item (a) Both buttons disabled. (b) Single enabled, Comparison disabled. (c) Both enabled.
+\end{testcase}
+
+% -----------------------------------------------------------------------------
+\subsection{Reset \& About}
+% -----------------------------------------------------------------------------
+
+\begin{testcase}{RA-001}{Reset/About}{Reset All clears all state}{High}
+  \item A full workflow has been performed (mesh loaded, voxelized, augmented, reconstructed).
+  \item Click ``Reset All''.
+  \item All internal state cleared. All labels show ``---''. Drop Zone returns to idle style. All buttons disabled except Browse. Status bar shows ``Reset --- ready for new file''.
+\end{testcase}
+
+\begin{testcase}{RA-002}{Reset/About}{Reset All from \texttt{.npy} only state}{Medium}
+  \item A \texttt{.npy} file is loaded. No mesh.
+  \item Click ``Reset All''.
+  \item All state cleared. Same as RA-001.
+\end{testcase}
+
+\begin{testcase}{RA-003}{Reset/About}{About dialog displays correctly}{Low}
+  \item Application is running.
+  \item Click ``More about PaleoVox...''.
+  \item A dialog opens with PaleoVox description, creators list with names and emails. Close button works. Dialog is modal.
+\end{testcase}
+
+\begin{testcase}{RA-004}{Reset/About}{About dialog close button}{Low}
+  \item About dialog is open.
+  \item Click ``Close''.
+  \item Dialog closes. Main window state unchanged.
+\end{testcase}
+
+% -----------------------------------------------------------------------------
+\subsection{Status Bar \& Error Handling}
+% -----------------------------------------------------------------------------
+
+\begin{testcase}{SE-001}{Status/Error}{Status bar shows initial ready message}{Low}
+  \item Fresh application start.
+  \item Observe status bar at bottom.
+  \item Shows ``Ready --- Drag \& drop a .ply, .obj or .npy file to begin''.
+\end{testcase}
+
+\begin{testcase}{SE-002}{Status/Error}{Status bar updates on each operation}{Medium}
+  \item Perform various operations (load, voxelize, augment, reconstruct).
+  \item Observe status bar after each.
+  \item Each operation updates the status bar with a descriptive message including counts.
+\end{testcase}
+
+\begin{testcase}{SE-003}{Status/Error}{Error dialog on backend failure}{Medium}
+  \item Induce an error (e.g., attempt to save to read-only directory).
+  \item Trigger the operation.
+  \item An error dialog appears with relevant title and message. Application does not crash. Status unchanged for unaffected state.
+\end{testcase}
+
+\begin{testcase}{SE-004}{Status/Error}{Window title and icon}{Low}
+  \item Application is running.
+  \item Observe the window title bar.
+  \item Title: ``PaleoVox --- Fossil Voxel Augmentation''. Icon is the logo if available.
+\end{testcase}
+
+% =============================================================================
+\newpage
+\section{Integration Test Scenarios}
+% =============================================================================
+
+\subsection{End-to-End Workflow: Mesh File}
+\begin{enumerate}[leftmargin=1.5em]
+  \item Drag-and-drop a \texttt{.ply} file onto the Drop Zone. \hfill\textit{Expect: Loads with green style.}
+  \item Verify File Info panel shows correct vertices/triangles. \hfill\textit{Expect: Populated.}
+  \item Go to Pipeline tab. Set npoints=50000, dim=128. Click Mesh $\rightarrow$ Voxels. \hfill\textit{Expect: Voxel grid created.}
+  \item Click Dilate Voxels (iterations=2). \hfill\textit{Expect: Occupied count increases.}
+  \item Go to Augmentations. Apply Deformation (Z, factor=0.85). \hfill\textit{Expect: Voxels compacted.}
+  \item Apply Erosion (Y, increment=0.3). \hfill\textit{Expect: Voxels partially removed.}
+  \item Apply Rotation (X=15°, Y=0°, Z=0°). \hfill\textit{Expect: Voxels rotated.}
+  \item Click Voxels $\rightarrow$ Mesh. \hfill\textit{Expect: Mesh reconstructed.}
+  \item Go to Reconstruction tab. Click Compare Original vs Reconstructed (Both). \hfill\textit{Expect: Viewer shows overlay.}
+  \item Go to View \& Save tab. Click Save Mesh. \hfill\textit{Expect: Saved successfully.}
+  \item Click Save Voxel. \hfill\textit{Expect: Saved successfully.}
+  \item Go to 2D Perspectives tab. Generate XY comparison. \hfill\textit{Expect: Dialog with overlay scatter.}
+  \item Go to t-SNE Analysis tab. Generate t-SNE. \hfill\textit{Expect: Dialog with embedding plot.}
+  \item Save t-SNE image. \hfill\textit{Expect: Save dialog and successful save.}
+  \item Click Reset All. \hfill\textit{Expect: All cleared.}
+\end{enumerate}
+
+\subsection{End-to-End Workflow: Voxel (.npy) File}
+\begin{enumerate}[leftmargin=1.5em]
+  \item Click Browse. Select a \texttt{.npy} file. \hfill\textit{Expect: Loads with voxel info.}
+  \item Verify File Info: shape and occupied voxels shown, vertices/triangles = ``---''. \hfill\textit{Expect: Correct.}
+  \item Verify augmentation buttons are enabled (Deform, Erode, Rotate, Fracture). \hfill\textit{Expect: All enabled.}
+  \item Verify mesh-dependent buttons (View Mesh, Save Mesh) are disabled. \hfill\textit{Expect: Disabled.}
+  \item Apply Erosion (X, increment=0.5). \hfill\textit{Expect: Voxel count decreases.}
+  \item Click Reconstruct from Voxels. \hfill\textit{Expect: Mesh reconstructed. View Mesh now enabled.}
+  \item View the reconstructed mesh. \hfill\textit{Expect: Open3D viewer opens.}
+  \item Save the reconstructed mesh as \texttt{.ply}. \hfill\textit{Expect: Saved.}
+  \item Generate 2D single perspective (XZ view). \hfill\textit{Expect: Dialog with scatter plot.}
+  \item Generate t-SNE comparison. \hfill\textit{Expect: Dialog with embedding.}
+\end{enumerate}
+
+\subsection{Sequential Augmentation Pipeline}
+\begin{enumerate}[leftmargin=1.5em]
+  \item Load mesh. Convert to voxels (dim=128).
+  \item Record original voxel count. \hfill\textit{Note value.}
+  \item Deformation (Z, 0.85) $\rightarrow$ Erosion (Y, 0.5) $\rightarrow$ Rotation (X=30°, Y=45°, Z=90°) $\rightarrow$ Fracture (max\_pos=10).
+  \item Voxel count should differ from original after each step. \hfill\textit{Expect: Cumulative changes.}
+  \item Compare original vs current voxels. \hfill\textit{Expect: Visible differences in blue/red overlay.}
+  \item Compare t-SNE. \hfill\textit{Expect: Embeddings show distribution differences.}
+\end{enumerate}
+
+% =============================================================================
+\section{Button State Matrix}
+% =============================================================================
+
+The following table summarizes expected button enabled states for key workflow stages.
+
+\small
+\begin{longtable}{lcccccc}
+\toprule
+\textbf{Button} & \textbf{Start} & \textbf{Mesh Only} & \textbf{Voxels} & \textbf{Reconstructed} & \textbf{npy Load} \\
+\midrule
+Load Mesh & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+Mesh $\rightarrow$ Voxels & $\square$ & $\blacksquare$ & $\square$ & $\square$ & $\square$ \\
+Dilate Voxels & $\square$ & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+Voxels $\rightarrow$ Mesh & $\square$ & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+Deformation Apply & $\square$ & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+Erosion Apply & $\square$ & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+Rotation Apply & $\square$ & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+Fracture Apply & $\square$ & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+Save Deformed Voxels & $\square$ & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+View Mesh & $\square$ & $\blacksquare$ & $\square$ & $\blacksquare$ & $\square$ \\
+View Voxels & $\square$ & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+Save Mesh & $\square$ & $\blacksquare$ & $\square$ & $\blacksquare$ & $\square$ \\
+Save Voxel & $\square$ & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+Reconstruct from Voxels & $\square$ & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+Compare Orig vs Recon & $\square$ & $\square$ & $\square$ & $\blacksquare$* & $\square$ \\
+Save Reconstructed & $\square$ & $\square$ & $\square$ & $\blacksquare$ & $\square$ \\
+Compare Voxels & $\square$ & $\square$ & $\blacksquare$** & $\blacksquare$** & $\blacksquare$** \\
+Generate t-SNE & $\square$ & $\square$ & $\blacksquare$** & $\blacksquare$** & $\blacksquare$** \\
+2D Single Perspective & $\square$ & $\square$ & $\blacksquare$ & $\blacksquare$ & $\blacksquare$ \\
+2D Comparison & $\square$ & $\square$ & $\blacksquare$** & $\blacksquare$** & $\blacksquare$** \\
+\bottomrule
+\multicolumn{7}{l}{\footnotesize $\blacksquare$ = enabled; $\square$ = disabled} \\
+\multicolumn{7}{l}{\footnotesize * Requires original\_mesh AND reconstructed\_mesh} \\
+\multicolumn{7}{l}{\footnotesize ** Requires original\_voxel AND voxel (both not None)} \\
+\multicolumn{7}{l}{\footnotesize Start = no file loaded; Mesh Only = .ply/.obj loaded; Voxels = voxelized; Reconstructed = mesh rebuilt; npy Load = .npy file loaded}
+\end{longtable}
+\normalsize
+
+% =============================================================================
+\section{Error Handling Coverage}
+% =============================================================================
+
+\begin{longtable}{p{4cm}p{8cm}p{3cm}}
+\toprule
+\textbf{Error Scenario} & \textbf{Expected Behavior} & \textbf{Test ID} \\
+\midrule
+Load corrupted/invalid file & Error dialog. No crash. Previous state preserved. & FL-011 \\
+Load unsupported file type & File rejected silently (drag/drop) or not shown (dialog filter). & FL-004 \\
+Mesh $\rightarrow$ Voxels with no mesh & Handler returns early. No error. & --- \\
+Augmentation with no voxels & Handler returns early. No error. & AU-013 \\
+View empty voxel grid & Status bar message. No viewer opened. & VS-003 \\
+t-SNE with zero occupied voxels & Error dialog. No crash. & TS-004 \\
+Reconstruct from empty voxels & Backend handles. Error reported gracefully. & --- \\
+Save to read-only directory & Error dialog with details. & SE-003 \\
+Load non-existent file path & File dialog prevents selection. & --- \\
+Threaded operations (viewers) & GUI remains responsive during 3D viewer. & VS-001, VS-002 \\
+Temp file cleanup after dialog close & No orphaned temp files accumulate. & TS-006, D2-009 \\
+\bottomrule
+\end{longtable}
+
+% =============================================================================
+\section{Regression Tests}
+% =============================================================================
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \textbf{RT-001}: After \texttt{.npy} loading was added, verify that \texttt{.ply} and \texttt{.obj} loading still works identically. \hfill\textit{(FL-001, FL-002)}
+  \item \textbf{RT-002}: After 2D Perspectives tab was added, verify that existing tabs (Pipeline, Augment, Reconstruction, View \& Save, t-SNE) still function correctly. \hfill\textit{(All existing tests)}
+  \item \textbf{RT-003}: After \texttt{save\_path} parameter was added to \texttt{plot\_2d\_perspective}, verify that standalone backend function still works (calling without \texttt{save\_path} opens \texttt{plt.show()}). \hfill\textit{(Manual backend test)}
+  \item \textbf{RT-004}: Drop Zone style transitions (idle $\rightarrow$ hover $\rightarrow$ loaded $\rightarrow$ idle on reset) work for all supported file types. \hfill\textit{(FL-010)}
+  \item \textbf{RT-005}: Voxel Comparison info label updates correctly after every augmentation. \hfill\textit{(RC-009)}
+\end{enumerate}
+
+% =============================================================================
+\section{Test Execution Summary}
+% =============================================================================
+
+\begin{longtable}{p{1.2cm}p{5.5cm}p{1.5cm}p{1.5cm}p{1.5cm}p{2cm}}
+\toprule
+\textbf{ID} & \textbf{Title} & \textbf{Priority} & \textbf{Pass/Fail} & \textbf{Tester} & \textbf{Date} \\
+\midrule
+FL-001 & Drag \& drop .ply & High & & & \\
+FL-002 & Drag \& drop .obj & High & & & \\
+FL-003 & Drag \& drop .npy & High & & & \\
+FL-004 & Drag \& drop unsupported & Medium & & & \\
+FL-005 & Browse dialog filters & High & & & \\
+FL-006 & Browse select .ply & High & & & \\
+FL-007 & Browse select .npy & High & & & \\
+FL-008 & Click Drop Zone opens dialog & Medium & & & \\
+FL-009 & Load Mesh button re-loads & Low & & & \\
+FL-010 & Drag visual state transitions & Medium & & & \\
+FL-011 & Load corrupted file & High & & & \\
+\addlinespace
+FI-001 & Info panel mesh stats & Medium & & & \\
+FI-002 & Info panel voxel stats & Medium & & & \\
+FI-003 & Info panel after voxelization & Medium & & & \\
+\addlinespace
+PL-001 & Mesh $\rightarrow$ Voxels (default) & High & & & \\
+PL-002 & Mesh $\rightarrow$ Voxels (custom) & Medium & & & \\
+PL-003 & Mesh $\rightarrow$ Voxels (boundary) & Low & & & \\
+PL-004 & Dilate (default) & High & & & \\
+PL-005 & Dilate (various iterations) & Medium & & & \\
+PL-006 & Voxels $\rightarrow$ Mesh & High & & & \\
+PL-007 & Full pipeline (end-to-end) & High & & & \\
+PL-008 & Pipeline button states & High & & & \\
+\addlinespace
+AU-001 & Deformation each axis & High & & & \\
+AU-002 & Deformation min/max factor & Medium & & & \\
+AU-003 & Erosion each axis & High & & & \\
+AU-004 & Erosion min/max increment & Medium & & & \\
+AU-005 & Rotation zero angles & Low & & & \\
+AU-006 & Rotation non-zero angles & Medium & & & \\
+AU-007 & Rotation max angles & Low & & & \\
+AU-008 & Fracture return\_both=False & High & & & \\
+AU-009 & Fracture return\_both=True & Medium & & & \\
+AU-010 & Fracture max\_pos boundary & Low & & & \\
+AU-011 & Save Deformed Voxels & High & & & \\
+AU-012 & Augmentation chain & Medium & & & \\
+AU-013 & Buttons disabled without voxels & Medium & & & \\
+\addlinespace
+VS-001 & View Mesh & High & & & \\
+VS-002 & View Voxels & High & & & \\
+VS-003 & View empty voxels & Low & & & \\
+VS-004 & Color picker & Medium & & & \\
+VS-005 & Save Mesh .ply & High & & & \\
+VS-006 & Save Mesh .obj & Medium & & & \\
+VS-007 & Save Voxel .npy & High & & & \\
+VS-008 & Default save filenames & Low & & & \\
+\addlinespace
+RC-001 & Reconstruct from Voxels & High & & & \\
+RC-002 & Reconstruct from .npy & High & & & \\
+RC-003 & Compare Both (meshes) & High & & & \\
+RC-004 & Compare Original Only & Medium & & & \\
+RC-005 & Compare Reconstructed Only & Medium & & & \\
+RC-006 & Compare Both (voxels) & High & & & \\
+RC-007 & Voxel comparison Original Only & Medium & & & \\
+RC-008 & Voxel comparison Current Only & Medium & & & \\
+RC-009 & Voxel comparison info label & Medium & & & \\
+RC-010 & Save Reconstructed Mesh & High & & & \\
+\addlinespace
+TS-001 & t-SNE default params & High & & & \\
+TS-002 & t-SNE custom params & Medium & & & \\
+TS-003 & t-SNE boundary values & Low & & & \\
+TS-004 & t-SNE empty voxels error & Medium & & & \\
+TS-005 & Save t-SNE image & Medium & & & \\
+TS-006 & Close t-SNE dialog & Low & & & \\
+TS-007 & t-SNE button state & Medium & & & \\
+\addlinespace
+D2-001 & 2D single XY view & High & & & \\
+D2-002 & 2D single XZ view & Medium & & & \\
+D2-003 & 2D single YZ view & Medium & & & \\
+D2-004 & 2D different colors & Low & & & \\
+D2-005 & 2D different markers & Low & & & \\
+D2-006 & 2D marker size & Low & & & \\
+D2-007 & 2D comparison & High & & & \\
+D2-008 & 2D comparison axes & Medium & & & \\
+D2-009 & Save 2D image & Medium & & & \\
+D2-010 & 2D button states & Medium & & & \\
+\addlinespace
+RA-001 & Reset All (full state) & High & & & \\
+RA-002 & Reset All (npy only) & Medium & & & \\
+RA-003 & About dialog display & Low & & & \\
+RA-004 & About dialog close & Low & & & \\
+\addlinespace
+SE-001 & Initial status bar message & Low & & & \\
+SE-002 & Status bar updates & Medium & & & \\
+SE-003 & Error dialog on failure & Medium & & & \\
+SE-004 & Window title and icon & Low & & & \\
+\bottomrule
+\end{longtable}
+
+\vspace{1cm}
+\begin{center}
+\large\textbf{Total Test Cases: 67}
+\end{center}
+
+\vspace{0.5cm}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Priority} & \textbf{Count} \\
+\midrule
+High   & 31 \\
+Medium & 27 \\
+Low    & 9  \\
+\bottomrule
+\end{tabular}
+
+\end{document}

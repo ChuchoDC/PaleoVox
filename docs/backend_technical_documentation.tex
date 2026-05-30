@@ -1,0 +1,818 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+
+\definecolor{paleoblue}{RGB}{74,158,255}
+\definecolor{paleogreen}{RGB}{76,175,80}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{darkgray}{RGB}{80,80,80}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=paleoblue,
+  urlcolor=paleoblue,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small PaleoVox --- Technical Documentation}
+\fancyhead[R]{\small v1.0.6}
+\fancyfoot[C]{\thepage}
+
+\titleformat{\section}{\Large\bfseries}{\thesection}{1em}{}[\color{paleoblue}\titlerule]
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{gray!40},
+  breaklines=true,
+  showstringspaces=false,
+  columns=flexible,
+  language=Python,
+}
+
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+
+{\Huge\bfseries PaleoVox}\\[0.5cm]
+{\Large Backend Technical Documentation}\\[0.5cm]
+{\Large \texttt{paleovoxpy.py}}\\[1.5cm]
+
+{\large Version 1.0.6}\\[2cm]
+
+\begin{tabular}{rl}
+\textbf{Date:} & \today \\
+\textbf{Authors:} & Alan Gabriel Amaro Colin \\
+                 & Ángel Ángeles Cortés \\
+                 & Jair Israel Barrientos Lara \\
+                 & Jesus Alberto Díaz Cruz \\
+\textbf{Institution:} & Facultad de Ciencias \& Instituto de Geología, UNAM \\
+\end{tabular}
+
+\vfill
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% =============================================================================
+\section{Introduction}
+% =============================================================================
+
+\subsection{Overview}
+
+\texttt{paleovoxpy.py} is the computational backend of PaleoVox, providing 21 core functions for 3D fossil data processing. The module implements a complete pipeline from mesh loading to voxel representation, taphonomic augmentation, mesh reconstruction, and visualization.
+
+\subsection{Dependencies}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Library} & \textbf{Import} & \textbf{Usage} \\
+\midrule
+Open3D & \texttt{o3d} & Mesh I/O, point cloud processing, Poisson reconstruction \\
+NumPy & \texttt{np} & Array operations, linear algebra \\
+SciPy & \texttt{ndimage}, \texttt{affine\_transform}, \texttt{zoom} & Morphological ops, geometric transforms \\
+Matplotlib & \texttt{plt} & 2D plotting, figure rendering \\
+Plotly & \texttt{go} (\texttt{graph\_objects}) & Interactive 3D visualization \\
+Seaborn & \texttt{sns} & Plot styling defaults \\
+scikit-learn & \texttt{TSNE} (\texttt{manifold}) & t-SNE dimensionality reduction \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Global Matplotlib Configuration}
+
+The module applies a global \texttt{plt.rcParams} configuration at import time (lines 29--118), setting:
+
+\begin{itemize}
+  \item Figure and save DPI: 300
+  \item Font family: sans-serif (size 11 base)
+  \item Title sizes: 18 (figure), 16 (axes), 14 (labels)
+  \item Tick parameters: size, width, direction, padding
+  \item Legend: 10pt font, 0.9 frame alpha
+  \item Patch edges: 1.5pt width, black, forced
+  \item Seaborn style: \texttt{whitegrid}
+\end{itemize}
+
+\subsection{Axis Conventions}
+
+All functions use NumPy's 3D array indexing convention:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ccl}
+\toprule
+\textbf{Axis ID} & \textbf{Label} & \textbf{Interpretation} \\
+\midrule
+0 & X / Depth & First dimension (rows) \\
+1 & Y / Height & Second dimension (columns) \\
+2 & Z / Width & Third dimension (slices) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+
+% =============================================================================
+\section{Function Catalog}
+% =============================================================================
+
+% -----------------------------------------------------------------------------
+\subsection{Load Functions}
+% -----------------------------------------------------------------------------
+
+\subsubsection{\texttt{load\_mesh(path, return\_bounds=False)}}
+
+\textbf{Signature:} \texttt{load\_mesh(path: str, return\_bounds: bool = False) $\rightarrow$ TriangleMesh | tuple}
+
+Loads a 3D triangle mesh from disk using Open3D's \texttt{read\_triangle\_mesh}. Supports common formats (\texttt{.ply}, \texttt{.obj}, \texttt{.stl}, \texttt{.off}, \texttt{.gltf}).
+
+When \texttt{return\_bounds=True}, returns a 4-tuple:
+\begin{lstlisting}
+(mesh, min_bound, max_bound, dimensions)
+\end{lstlisting}
+where \texttt{min\_bound} and \texttt{max\_bound} are 3-element NumPy arrays, and \texttt{dimensions = max\_bound - min\_bound}.
+
+\subsubsection{\texttt{load\_voxel(path)}}
+
+\textbf{Signature:} \texttt{load\_voxel(path: str) $\rightarrow$ np.ndarray}
+
+Thin wrapper around \texttt{np.load()}. Loads a voxel array from a \texttt{.npy} file. The returned array is typically a 3D binary array of shape \texttt{(N, N, N)}.
+
+% -----------------------------------------------------------------------------
+\subsection{Conversion Functions}
+% -----------------------------------------------------------------------------
+
+\subsubsection{\texttt{mesh\_to\_voxel(...)}}
+
+\textbf{Signature:} \texttt{mesh\_to\_voxel(mesh, npoints, dimensions, pr, return\_scale\_info) $\rightarrow$ np.ndarray | tuple}
+
+Converts a triangle mesh to a dense 3D binary voxel grid. Algorithm steps:
+
+\begin{enumerate}
+  \item Captures original mesh bounds (min, max, center, dimensions)
+  \item Samples points from mesh surface using \textbf{Poisson disk sampling} (\texttt{mesh.sample\_points\_poisson\_disk})
+  \item Computes voxel size: $\max(\text{max\_bound\_pcd} - \text{min\_bound\_pcd}) / \text{dimensions}$
+  \item Creates an Open3D \texttt{VoxelGrid} from the point cloud
+  \item Maps voxel coordinates to a dense NumPy array, clipping indices to \texttt{[0, dimensions-1]}
+  \item Computes reconstruction scale factor: $\text{original\_dimensions} / \text{normalized\_dimensions}$
+\end{enumerate}
+
+\textbf{Return modes:}
+\begin{itemize}
+  \item \texttt{return\_scale\_info=False}: Returns the voxel array only
+  \item \texttt{return\_scale\_info=True}: Returns \texttt{(voxel\_array, scale\_factor, min\_bound, max\_bound, center)}
+\end{itemize}
+
+\textbf{Parameters:}
+\begin{table}[H]
+\centering
+\begin{tabular}{lcp{7cm}}
+\toprule
+\textbf{Param} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{mesh} & -- & Open3D TriangleMesh object \\
+\texttt{npoints} & 10000 & Points sampled from surface (100--200000) \\
+\texttt{dimensions} & 128 & Cubic grid size (32--512) \\
+\texttt{pr} & False & Print debug info (shape, counts, scale) \\
+\texttt{return\_scale\_info} & False & Return original scale metadata \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% -----------------------------------------------------------------------------
+\subsection{Morphological Functions}
+% -----------------------------------------------------------------------------
+
+\subsubsection{\texttt{binary\_dilation(array\_3d, iterations=2)}}
+
+\textbf{Signature:} \texttt{binary\_dilation(array\_3d, iterations=2) $\rightarrow$ np.ndarray}
+
+Implements a three-stage morphological closing pipeline:
+
+\begin{enumerate}
+  \item \textbf{Binary dilation} with 6-connectivity (face neighbors): expands occupied regions
+  \item \textbf{Binary erosion} with the same structure and iterations: contracts back to original boundaries
+  \item \textbf{Hole filling} (\texttt{ndimage.binary\_fill\_holes}): fills enclosed empty cavities
+\end{enumerate}
+
+\textbf{Constraints:}
+\begin{itemize}
+  \item Input must be shape \texttt{(128, 128, 128)} --- raises \texttt{ValueError} otherwise
+  \item Returns \texttt{np.int8} array (values 0 or 1)
+  \item Uses 6-connectivity structure (faces only, not edges or corners) to avoid over-filling
+\end{itemize}
+
+\textbf{Complexity:} $O(n^3)$ with $n = 128$; typical runtime 0.1--0.5 seconds.
+
+% -----------------------------------------------------------------------------
+\subsection{Reconstruction Function}
+% -----------------------------------------------------------------------------
+
+\subsubsection{\texttt{high\_quality\_voxel\_to\_mesh(voxel\_array, ...)}}
+
+\textbf{Signature:}
+\begin{lstlisting}
+high_quality_voxel_to_mesh(voxel_array, voxel_size=1.0,
+    target_scale=None, original_bounds=None,
+    solidify=True, jitter_amount=0.4,
+    sor_neighbors=20, sor_std_ratio=1.5,
+    density_quantile=0.25, min_component_ratio=0.01,
+    max_triangles=100000) -> TriangleMesh
+\end{lstlisting}
+
+Converts a binary voxel grid to a high-quality triangle mesh using a multi-stage pipeline:
+
+\begin{enumerate}
+  \item \textbf{Solidification} (optional): Morphological closing (dilation $\rightarrow$ erosion $\rightarrow$ hole filling) to eliminate surface porosity and ensure proper inside/outside information for Poisson solver
+  \item \textbf{Point cloud generation}: Converts occupied voxel coordinates to a point cloud, scaled by \texttt{voxel\_size}
+  \item \textbf{Scale correction}: If \texttt{target\_scale} is provided, scales points to match original mesh dimensions
+  \item \textbf{Jitter}: Adds uniform random noise ($\pm$\texttt{jitter\_amount} $\times$ effective voxel size) to break grid regularity and produce organic surfaces
+  \item \textbf{Translation}: If \texttt{original\_bounds} is provided, translates points to match original mesh center
+  \item \textbf{Statistical Outlier Removal} (SOR): Removes isolated noise points using k-nearest neighbor distance analysis
+  \item \textbf{Downsampling}: If point count exceeds 500000, applies voxel downsampling to maintain performance
+  \item \textbf{Normal estimation}: Computes normals using hybrid KD-tree search; radius estimated from average neighbor distance
+  \item \textbf{Normal orientation}: \texttt{orient\_normals\_consistent\_tangent\_plane(k=30)}
+  \item \textbf{Poisson surface reconstruction}: Depth $= \min(12, \lfloor\log_2(\text{n\_points})\rfloor - 2)$; width=0, scale=1.1, linear\_fit=True, multi-threaded
+  \item \textbf{Density filtering}: Removes vertices with Poisson density below \texttt{density\_quantile} quantile
+  \item \textbf{Cleanup}: Removes degenerate/duplicated triangles and vertices
+  \item \textbf{Component filtering}: Removes triangle clusters smaller than \texttt{min\_component\_ratio} $\times$ largest cluster size
+  \item \textbf{Decimation} (conditional): Quadric edge collapse if triangle count exceeds \texttt{max\_triangles}
+  \item \textbf{Taubin smoothing}: 10 iterations with $\lambda = 0.5$, $\mu = -0.53$
+\end{enumerate}
+
+\textbf{Parameters:}
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lcp{6.5cm}}
+\toprule
+\textbf{Param} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{voxel\_array} & -- & Binary 3D voxel grid \\
+\texttt{voxel\_size} & 1.0 & Physical size per voxel \\
+\texttt{target\_scale} & None & Desired output dimensions (3-element array) \\
+\texttt{original\_bounds} & None & (min, max) tuple for translation \\
+\texttt{solidify} & True & Pre-process with morphological closing \\
+\texttt{jitter\_amount} & 0.4 & Random perturbation $\pm$40\% of voxel size \\
+\texttt{sor\_neighbors} & 20 & SOR neighbor count (0 = disable) \\
+\texttt{sor\_std\_ratio} & 1.5 & SOR std multiplier \\
+\texttt{density\_quantile} & 0.25 & Density filter threshold \\
+\texttt{min\_component\_ratio} & 0.01 & Min component size ratio (0 = disable) \\
+\texttt{max\_triangles} & 100000 & Decimation cap (None = disable) \\
+\bottomrule
+\end{tabular}
+\normalsize
+\end{table}
+
+% -----------------------------------------------------------------------------
+\subsection{Basic Utility Functions}
+% -----------------------------------------------------------------------------
+
+\subsubsection{\texttt{create\_voxel\_grid(size=128)}}
+
+Returns an empty (all \texttt{False}) boolean voxel grid of shape \texttt{(size, size, size)}.
+
+\subsubsection{\texttt{add\_line\_to\_voxel(...)}}
+
+\textbf{Signature:} \texttt{add\_line\_to\_voxel(voxel\_grid, start\_point, end\_point) $\rightarrow$ np.ndarray}
+
+\textbf{Algorithm:} Bresenham's 3D Line Algorithm
+
+Draws a 6-connected line between two 3D integer coordinates by setting all intersected voxels to \texttt{True}. Modifies the input grid in-place.
+
+\textbf{Algorithm details:}
+\begin{itemize}
+  \item Determines the driving axis (largest $|\Delta|$ among X, Y, Z)
+  \item Steps one voxel at a time along the driving axis
+  \item Conditionally steps along the two non-driving axes based on error accumulation terms $p1$, $p2$
+  \item Uses only integer arithmetic (multiplications by 2)
+  \item Includes bounds checking for each voxel coordinate
+  \item Sets the endpoint explicitly
+\end{itemize}
+
+The three cases (X-driven, Y-driven, Z-driven) follow identical logic but with swapped axis roles.
+
+\textbf{Complexity:} $O(L)$ where $L$ is the number of steps along the driving axis (at most the grid size).
+
+\textbf{Properties:}
+\begin{itemize}
+  \item Produces 6-connected lines (voxels share faces, not edges or corners)
+  \item Deterministic and symmetric for swapped start/end points
+  \item Handles out-of-bounds coordinates gracefully (silently skips them)
+\end{itemize}
+
+\subsubsection{\texttt{find\_closest\_to\_origin(vectors)}}
+
+Returns \texttt{(closest\_vector, index)} for the vector in the input array $(N,3)$ with minimum Euclidean distance to $(0,0,0)$.
+
+\subsubsection{\texttt{get\_closest\_to\_origin(vectors)}}
+
+Variant of \texttt{find\_closest\_to\_origin} that returns only the closest vector (no index).
+
+% -----------------------------------------------------------------------------
+\subsection{Damage Simulation Functions}
+% -----------------------------------------------------------------------------
+
+\subsubsection{\texttt{deformation(...)}}
+
+\textbf{Signature:} \texttt{deformation(voxel\_array, compaction\_factor, compaction\_axis, preserve\_binary, threshold) $\rightarrow$ np.ndarray}
+
+\textbf{Algorithm: ``Squash and Center''}
+
+\begin{enumerate}
+  \item Computes new compressed dimension: $\text{new\_len} = \max(1, \lfloor \text{original\_len} \times \text{factor} \rfloor)$
+  \item Applies \texttt{scipy.ndimage.zoom} with order=0 (nearest neighbor) along the specified axis
+  \item Centers the compressed volume within the original bounding box by symmetric padding
+  \item If \texttt{preserve\_binary=True}, thresholds the result at \texttt{threshold} (default 0.5)
+\end{enumerate}
+
+\textbf{Compaction axis mapping:}
+\begin{itemize}
+  \item 0 = Z-axis (depth/vertical) --- common for sedimentary compaction
+  \item 1 = Y-axis (height)
+  \item 2 = X-axis (width/length)
+\end{itemize}
+
+\textbf{Note:} The output preserves the original array shape. The object is compressed within a padded bounding box, not cropped.
+
+\subsubsection{\texttt{erotion\_general(...)}}
+
+\textbf{Signature:} \texttt{erotion\_general(voxel, axis\_idx, increment\_min, pr) $\rightarrow$ np.ndarray}
+
+\textbf{Algorithm: Random Cut Plane}
+
+\begin{enumerate}
+  \item Finds all occupied voxel coordinates along \texttt{axis\_idx}
+  \item Computes: $\text{coefficient} = \text{max\_val} / \text{min\_val}$
+  \item Computes lower bound: $\text{restriction} = \lfloor \text{min\_val} \times \text{coefficient} \times \text{increment\_min} \rfloor$
+  \item Selects random cut point: $\texttt{np.random.randint(restriction, max\_val)}$
+  \item Zeroes all voxels beyond the cut point along the axis
+\end{enumerate}
+
+The effective cut range is $[\text{max\_val} \times \text{increment\_min},\ \text{max\_val}]$, ensuring at least a fraction \texttt{increment\_min} of the object's extent remains.
+
+\textbf{Note:} Different calls produce different results (stochastic). Use \texttt{np.random.seed()} for reproducibility.
+
+\subsubsection{\texttt{rotate\_voxel(voxel, angle\_x, angle\_y, angle\_z)}}
+
+\textbf{Algorithm: ZYX Euler Rotation}
+
+Applies rigid 3D rotation about the geometric center using:
+\begin{enumerate}
+  \item Rotation matrices $R_x(\theta_x)$, $R_y(\theta_y)$, $R_z(\theta_z)$
+  \item Combined rotation: $R = R_z \cdot R_y \cdot R_x$ (ZYX order, applied as X $\rightarrow$ Y $\rightarrow$ Z)
+  \item Inverse matrix: $R^{-1}$ (for the affine transform's output-to-input mapping)
+  \item Offset: $\mathbf{c} - R^{-1}\mathbf{c}$ (rotation about center $\mathbf{c} = \text{shape}/2$)
+  \item \texttt{affine\_transform} with order=0 (nearest neighbor), mode=\texttt{'constant'}, cval=0
+\end{enumerate}
+
+\textbf{Angles:} All in radians. Positive values follow the right-hand rule.
+
+\textbf{Rotation matrices:}
+\begin{align*}
+R_x &= \begin{bmatrix}1 & 0 & 0 \\ 0 & \cos\theta_x & -\sin\theta_x \\ 0 & \sin\theta_x & \cos\theta_x\end{bmatrix} \\
+R_y &= \begin{bmatrix}\cos\theta_y & 0 & \sin\theta_y \\ 0 & 1 & 0 \\ -\sin\theta_y & 0 & \cos\theta_y\end{bmatrix} \\
+R_z &= \begin{bmatrix}\cos\theta_z & -\sin\theta_z & 0 \\ \sin\theta_z & \cos\theta_z & 0 \\ 0 & 0 & 1\end{bmatrix}
+\end{align*}
+
+\subsubsection{\texttt{rotate\_voxel\_inv(voxel, angle\_x, angle\_y, angle\_z)}}
+
+Identical to \texttt{rotate\_voxel} except uses XYZ rotation order: $R = R_x \cdot R_y \cdot R_z$.
+
+\textbf{Note:} Despite the name ``inv'', this is \textbf{not} the mathematical inverse of \texttt{rotate\_voxel}. It is an alternative Euler angle convention (intrinsic rotations in XYZ order vs. ZYX order). For non-zero angles on multiple axes, the two functions produce different results.
+
+\subsubsection{\texttt{null\_planes(voxel\_curve, axis)}}
+
+\textbf{Signature:} \texttt{null\_planes(voxel\_curve, axis) $\rightarrow$ np.ndarray}
+
+Helper for \texttt{propagator\_fracture}. Takes a curve (set of voxels) and projects it along a specified axis to fill all voxels in that direction. Creates a ``curtain'' from the curve.
+
+\begin{itemize}
+  \item axis=0: $\text{result}[:, y, z] = 1$ for all $(y,z)$ in the curve
+  \item axis=1: $\text{result}[x, :, z] = 1$ for all $(x,z)$ in the curve
+  \item axis=2: $\text{result}[x, y, :] = 1$ for all $(x,y)$ in the curve
+\end{itemize}
+
+\subsubsection{\texttt{propagator\_fracture(...)}}
+
+\textbf{Signature:} \texttt{propagator\_fracture(voxel\_grid, max\_position, return\_both, pr) $\rightarrow$ np.ndarray | [arr, arr]}
+
+\textbf{Algorithm: Stochastic Fracture Propagation}
+
+Simulates crack growth through a voxel volume via iterative stochastic propagation:
+
+\begin{enumerate}
+  \item Creates copies: the original voxel grid and an empty fracture pattern grid
+  \item Finds all occupied voxel coordinates: $\mathbf{on} \in \mathbb{R}^{n \times 3}$ where $\text{voxel}>0$
+  \item Determines dominant axis: $\operatorname{argmin}(\sum \mathbf{on}, \text{axis}=0)$ --- the shortest dimension
+  \item Lexicographically sorts coordinates: $\texttt{np.lexsort((on[:,2], on[:,1], on[:,0]))}$
+  \item Selects starting point: $\texttt{get\_closest\_to\_origin(on\_sorted)}$
+  \item \textbf{Iterative propagation loop:}
+    \begin{enumerate}
+      \item Masks available space: $\text{mask} = \forall i: a_i < \text{on\_sorted}_i$ (all coordinates greater than current point)
+      \item Computes Euclidean distances from current point $a$ to all candidates
+      \item Sorts candidates by distance
+      \item Randomly selects from the nearest \texttt{max\_position} candidates
+      \item Draws a Bresenham line from current point to selected candidate
+      \item Sets current point to the selected candidate; repeats
+    \end{enumerate}
+  \item \textbf{Termination:} When no candidates satisfy the $\forall_i$ constraint, the loop raises an exception (caught internally)
+  \item Subtracts fracture planes from the original grid: $\text{final} = \text{original} - \texttt{null\_planes(fracture, dominant\_axis)}$
+  \item Handles overflow: replaces 255 values with 0 (for int8 arithmetic)
+\end{enumerate}
+
+\textbf{Return modes:}
+\begin{itemize}
+  \item \texttt{return\_both=False}: Returns only the fractured object (original minus fracture lines)
+  \item \texttt{return\_both=True}: Returns \texttt{[fractured\_object, fracture\_pattern]}
+\end{itemize}
+
+\textbf{Key properties:}
+\begin{itemize}
+  \item Directional bias: propagation only moves forward (all coordinates $>$ current, never backward)
+  \item Stochastic: each call produces different fracture paths
+  \item No self-intersection: forward-only constraint prevents loops
+  \item Complexity: $O(N \log N)$ for sorting + $O(M)$ propagation ($N$ = occupied voxels, $M$ = fracture segments)
+\end{itemize}
+
+% -----------------------------------------------------------------------------
+\subsection{Visualization Functions}
+% -----------------------------------------------------------------------------
+
+\subsubsection{\texttt{plot\_voxels(...)}}
+
+\textbf{Signature:} \texttt{plot\_voxels(voxel\_array, voxel\_array2, names, colors, title) $\rightarrow$ None}
+
+\textbf{Dependency:} Plotly \texttt{graph\_objects.Scatter3d}
+
+Interactive 3D scatter plot of occupied voxels. Each occupied voxel is rendered as a small marker (size=1, opacity=0.8). Supports one or two overlaid voxel arrays with different colors and legend labels. Maintains data aspect ratio (\texttt{aspectmode='data'}).
+
+\subsubsection{\texttt{plot\_meshes(...)}}
+
+\textbf{Signature:} \texttt{plot\_meshes(mesh1, mesh2, opacity1, opacity2, colors, names, title) $\rightarrow$ None}
+
+\textbf{Dependency:} Plotly \texttt{graph\_objects.Mesh3d}
+
+Interactive 3D mesh visualization. Renders one or two triangle meshes with configurable opacity, colors, and legend entries.
+
+\subsubsection{\texttt{plot\_2d\_perspective(...)}}
+
+\textbf{Signature:} \texttt{plot\_2d\_perspective(voxel\_array, axis, color, marker, size, save\_path) $\rightarrow$ None | str}
+
+\textbf{Dependency:} Matplotlib
+
+2D scatter projection of occupied voxels onto a selected plane. The third axis is collapsed (all voxels at any depth are shown --- an ``X-ray'' view).
+
+\textbf{Axis parameter:} List of two strings from \texttt{\{'x', 'y', 'z'\}} mapped to array indices $\{0, 1, 2\}$.
+
+\begin{itemize}
+  \item \texttt{['x', 'y']}: XY top-down view
+  \item \texttt{['x', 'z']}: XZ side view
+  \item \texttt{['y', 'z']}: YZ side view
+\end{itemize}
+
+\textbf{Output modes:} If \texttt{save\_path} is provided, saves figure to disk (PNG, 150 DPI) and closes without display. Otherwise calls \texttt{plt.show()}.
+
+\subsubsection{\texttt{plot\_2d\_perspective\_2samples(...)}}
+
+\textbf{Signature:} \texttt{plot\_2d\_perspective\_2samples(v1, v2, axis, colors, markers, sizes, labels, save\_path) $\rightarrow$ None | str}
+
+Overlaid 2D comparison of two voxel arrays on the same axes. Creates two \texttt{plt.scatter} calls with independent colors, markers, and sizes. Adds legend. Supports \texttt{save\_path} for headless rendering (same pattern as \texttt{plot\_2d\_perspective}).
+
+\subsubsection{\texttt{tsne\_visualization(...)}}
+
+\textbf{Signature:} \texttt{tsne\_visualization(voxel\_array, seed, percentage, pp, size, color, pr) $\rightarrow$ None}
+
+\textbf{Dependency:} scikit-learn \texttt{TSNE}
+
+Single-array t-SNE visualization:
+
+\begin{enumerate}
+  \item Extracts occupied voxel coordinates: $\mathbf{X} \in \mathbb{R}^{n \times 3}$
+  \item Randomly samples $\lfloor n \times \text{percentage} \rfloor$ points
+  \item Fits t-SNE with \texttt{perplexity=pp}, \texttt{random\_state=seed}
+  \item Projects to 2D: $\mathbf{X}_{\text{tsne}} \in \mathbb{R}^{m \times 2}$
+  \item Scatter plot with configured color and size
+\end{enumerate}
+
+\subsubsection{\texttt{tsne\_compare(...)}}
+
+\textbf{Signature:} \texttt{tsne\_compare(voxel\_original, voxel\_deformed, seed, percentage, pp, size, colors, labels, pr, save\_path) $\rightarrow$ None | str}
+
+\textbf{Dependency:} scikit-learn \texttt{TSNE}
+
+Side-by-side t-SNE comparison in a \textbf{shared embedding space}:
+
+\begin{enumerate}
+  \item Extracts occupied voxels from both arrays
+  \item Samples \texttt{percentage} fraction from each using separate random seeds per array
+  \item Concatenates both point sets: $\mathbf{X}_{\text{all}} = [\mathbf{X}_{\text{orig}}; \mathbf{X}_{\text{def}}]$
+  \item Fits \textbf{one} t-SNE model on the combined set
+  \item Splits the 2D embedding back into original and deformed parts
+  \item Renders two side-by-side subplots (16$\times$7 inch figure)
+\end{enumerate}
+
+This approach ensures the embeddings are directly comparable since they occupy the same t-SNE space.
+
+\textbf{Output modes:} If \texttt{save\_path} is provided, saves the figure and closes (returns \texttt{save\_path}). Otherwise displays via \texttt{plt.show()}.
+
+% -----------------------------------------------------------------------------
+\subsection{Save Functions}
+% -----------------------------------------------------------------------------
+
+\subsubsection{\texttt{save\_mesh(mesh, path)}}
+
+Wraps \texttt{o3d.io.write\_triangle\_mesh} with try/except error handling. Prints success or error message. Format is determined by file extension (\texttt{.ply}, \texttt{.obj}, \texttt{.stl}, \texttt{.off}, \texttt{.gltf}).
+
+\subsubsection{\texttt{save\_voxel(voxel, path)}}
+
+Wraps \texttt{np.save} with try/except. Auto-appends \texttt{.npy} extension if not present in path. Prints confirmation or error message to console.
+
+\newpage
+
+% =============================================================================
+\section{Function Dependency Graph}
+% =============================================================================
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Function} & \textbf{o3d} & \textbf{np} & \textbf{scipy} & \textbf{plt} & \textbf{sklearn} \\
+\midrule
+\texttt{load\_mesh} & $\bullet$ & & & & \\
+\texttt{load\_voxel} & & $\bullet$ & & & \\
+\texttt{mesh\_to\_voxel} & $\bullet$ & $\bullet$ & & & \\
+\texttt{binary\_dilation} & & $\bullet$ & $\bullet$ & & \\
+\texttt{high\_quality\_voxel\_to\_mesh} & $\bullet$ & $\bullet$ & $\bullet$ & & \\
+\texttt{deformation} & & $\bullet$ & $\bullet$ & & \\
+\texttt{erotion\_general} & & $\bullet$ & & & \\
+\texttt{rotate\_voxel} & & $\bullet$ & $\bullet$ & & \\
+\texttt{rotate\_voxel\_inv} & & $\bullet$ & $\bullet$ & & \\
+\texttt{propagator\_fracture} & & $\bullet$ & & & \\
+\texttt{null\_planes} & & $\bullet$ & & & \\
+\texttt{create\_voxel\_grid} & & $\bullet$ & & & \\
+\texttt{add\_line\_to\_voxel} & & $\bullet$ & & & \\
+\texttt{find\_closest\_to\_origin} & & $\bullet$ & & & \\
+\texttt{get\_closest\_to\_origin} & & $\bullet$ & & & \\
+\texttt{plot\_voxels} & & $\bullet$ & & & \\
+\texttt{plot\_meshes} & & $\bullet$ & & & \\
+\texttt{plot\_2d\_perspective} & & $\bullet$ & & $\bullet$ & \\
+\texttt{plot\_2d\_perspective\_2samples} & & $\bullet$ & & $\bullet$ & \\
+\texttt{tsne\_visualization} & & $\bullet$ & & $\bullet$ & $\bullet$ \\
+\texttt{tsne\_compare} & & $\bullet$ & & $\bullet$ & $\bullet$ \\
+\texttt{save\_mesh} & $\bullet$ & & & & \\
+\texttt{save\_voxel} & & $\bullet$ & & & \\
+\midrule
+\textbf{Total} & 4 & 22 & 5 & 4 & 2 \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Library dependencies per function ($\bullet$ = used)}
+\end{table}
+
+\subsection{Internal Call Graph}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lp{9cm}}
+\toprule
+\textbf{Function} & \textbf{Calls} \\
+\midrule
+\texttt{propagator\_fracture} & \texttt{create\_voxel\_grid}, \texttt{get\_closest\_to\_origin}, \texttt{add\_line\_to\_voxel}, \texttt{null\_planes} \\
+\texttt{high\_quality\_voxel\_to\_mesh} & \texttt{ndimage.binary\_dilation}, \texttt{ndimage.binary\_erosion}, \texttt{ndimage.binary\_fill\_holes} (internal solidify step) \\
+\texttt{binary\_dilation} & \texttt{ndimage.binary\_dilation}, \texttt{ndimage.binary\_erosion}, \texttt{ndimage.binary\_fill\_holes} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\newpage
+
+% =============================================================================
+\section{Data Flow: Typical Pipeline}
+% =============================================================================
+
+\subsection{Mesh-to-Voxel-to-Mesh Pipeline}
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \texttt{load\_mesh(path, return\_bounds=True)} $\rightarrow$ \texttt{(mesh, min\_b, max\_b, dims)}
+  \item \texttt{mesh\_to\_voxel(mesh, npoints, dimensions, return\_scale\_info=True)} $\rightarrow$ \texttt{(voxel, scale, min\_b, max\_b, center)}
+  \item \texttt{[optional]} \texttt{binary\_dilation(voxel, iterations)} $\rightarrow$ \texttt{dilated\_voxel}
+  \item \texttt{[optional]} Augmentation function $\rightarrow$ \texttt{modified\_voxel}
+  \item \texttt{high\_quality\_voxel\_to\_mesh(modified\_voxel, target\_scale=scale, original\_bounds=(min\_b, max\_b))} $\rightarrow$ \texttt{reconstructed\_mesh}
+  \item \texttt{save\_mesh(reconstructed\_mesh, path)}
+  \item \texttt{save\_voxel(modified\_voxel, path)}
+\end{enumerate}
+
+\subsection{Direct Voxel Pipeline (\texttt{.npy})}
+
+\begin{enumerate}[leftmargin=1.5em]
+  \item \texttt{load\_voxel(path)} $\rightarrow$ \texttt{voxel}
+  \item \texttt{[optional]} Augmentation function $\rightarrow$ \texttt{modified\_voxel}
+  \item \texttt{high\_quality\_voxel\_to\_mesh(modified\_voxel)} $\rightarrow$ \texttt{mesh} (unit scale, no original bounds)
+  \item \texttt{save\_mesh(mesh, path)} or \texttt{save\_voxel(modified\_voxel, path)}
+\end{enumerate}
+
+\newpage
+
+% =============================================================================
+\section{Algorithm Reference}
+% =============================================================================
+
+\subsection{Bresenham's 3D Line Algorithm (X-driven case)}
+
+For a line from $(x_1,y_1,z_1)$ to $(x_2,y_2,z_2)$ with $|\Delta x|$ as the largest component:
+
+\begin{lstlisting}[language=Python,escapechar=|]
+dx = |x2 - x1|;  dy = |y2 - y1|;  dz = |z2 - z1|
+xs = sign(x2 - x1);  ys = sign(y2 - y1);  zs = sign(z2 - z1)
+p1 = 2*dy - dx     # Y error term
+p2 = 2*dz - dx     # Z error term
+
+while x1 != x2:
+    voxel_grid[x1, y1, z1] = True
+    x1 += xs
+    if p1 >= 0:
+        y1 += ys
+        p1 -= 2*dx
+    if p2 >= 0:
+        z1 += zs
+        p2 -= 2*dx
+    p1 += 2*dy
+    p2 += 2*dz
+\end{lstlisting}
+
+\subsection{Poisson Reconstruction Depth}
+
+The depth parameter for Poisson surface reconstruction is computed adaptively:
+
+\[
+\text{depth} = \min\left(12, \ \lfloor \log_2(N) \rfloor - 2\right)
+\]
+
+where $N$ is the number of input points after SOR and downsampling. This ensures:
+\begin{itemize}
+  \item Sparse point clouds ($< 2^{14} = 16384$ points): depth $\leq 12$
+  \item Dense point clouds ($\geq 2^{14}$ points): depth $= 12$ (maximum)
+  \item Minimum practical depth: approximately 6 (for $N \approx 256$)
+\end{itemize}
+
+\subsection{Scale Factor for Mesh Reconstruction}
+
+When restoring original mesh scale from voxels:
+
+\[
+\text{scale\_factor}_i = \frac{\text{original\_dim}_i}{\text{normalized\_dim}_i}, \quad i \in \{x, y, z\}
+\]
+
+where \texttt{original\_dim} is from the source mesh and \texttt{normalized\_dim} is from the voxel grid generated via Poisson disk sampling.
+
+\newpage
+
+% =============================================================================
+\section{Performance Characteristics}
+% =============================================================================
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccc}
+\toprule
+\textbf{Function} & \textbf{Complexity} & \textbf{Typical Time} & \textbf{Memory} \\
+\midrule
+\texttt{load\_mesh} & $O(V+T)$ & $<0.1$s (small) & Mesh size \\
+\texttt{mesh\_to\_voxel} & $O(N + D^3)$ & 0.5--2s & $O(D^3)$ \\
+\texttt{binary\_dilation} & $O(n^3)$ & 0.1--0.5s & $O(n^3)$ \\
+\texttt{high\_quality\_voxel\_to\_mesh} & $O(N \log N)$ & 2--10s & $O(N)$ \\
+\texttt{deformation} & $O(n^3)$ & $<0.1$s & $O(n^3)$ \\
+\texttt{erotion\_general} & $O(n^3)$ & $<0.1$s & $O(n^3)$ \\
+\texttt{rotate\_voxel} & $O(n^3)$ & 0.1--0.5s & $O(n^3)$ \\
+\texttt{propagator\_fracture} & $O(N \log N + M)$ & 0.5--2s & $O(N)$ \\
+\texttt{tsne\_compare} & $O(m \log m \cdot p)$ & 5--30s & $O(m)$ \\
+\bottomrule
+\multicolumn{4}{l}{\footnotesize $V$ = vertices; $T$ = triangles; $D$ = dimensions; $N$ = occupied voxels; $n$ = grid size; $M$ = fracture segments; $m$ = sampled points; $p$ = perplexity} \\
+\end{tabular}%
+}
+\end{table}
+
+\textbf{Notes:}
+\begin{itemize}
+  \item \texttt{high\_quality\_voxel\_to\_mesh} is the most computationally intensive function. Runtime is dominated by normal estimation, Poisson reconstruction, and Taubin smoothing.
+  \item \texttt{tsne\_compare} runtime is proportional to perplexity and sample size. High perplexity values ($>200$) on large samples may take $>60$ seconds.
+  \item Memory for $256^3$ grids is approximately 16 MB (as \texttt{uint8}). Doubling resolution to $512^3$ requires 128 MB.
+\end{itemize}
+
+\newpage
+
+% =============================================================================
+\section{Error Handling and Edge Cases}
+% =============================================================================
+
+\begin{table}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{p{4.5cm}p{9cm}}
+\toprule
+\textbf{Function} & \textbf{Edge Case Handling} \\
+\midrule
+\texttt{load\_mesh} & Open3D raises on invalid files; caller must catch \\
+\texttt{load\_voxel} & NumPy raises \texttt{FileNotFoundError} or \texttt{ValueError} on bad files \\
+\texttt{binary\_dilation} & \texttt{ValueError} if shape $\neq$ (128,128,128) \\
+\texttt{mesh\_to\_voxel} & Clips voxel indices to [0, dimensions-1]; handles empty meshes gracefully \\
+\texttt{erotion\_general} & If no occupied voxels, returns copy unchanged; prints warning if \texttt{pr=True} \\
+\texttt{propagator\_fracture} & Bare \texttt{except} catches loop termination; suppresses error silently \\
+\texttt{high\_quality\_voxel\_to\_mesh} & All filters have zero-count guards; SOR disabled if $N \leq$ neighbors; decimation/component filters have min-size guards \\
+\texttt{tsne\_compare} & Returns None if \texttt{save\_path} is provided but raises no errors \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Known Limitations}
+\begin{enumerate}
+  \item \texttt{binary\_dilation} enforces shape (128,128,128). For other grid sizes, use the underlying SciPy functions directly.
+  \item \texttt{propagator\_fracture} uses an unqualified \texttt{except} clause to terminate the propagation loop. This catches all exceptions, which may mask genuine errors in the Bresenham line drawing.
+  \item \texttt{rotate\_voxel} and \texttt{rotate\_voxel\_inv} lose voxels that rotate outside the original bounding box (filled with 0).
+  \item \texttt{erotion\_general} uses the global NumPy random state; reproducibility requires explicit \texttt{np.random.seed()}.
+  \item \texttt{high\_quality\_voxel\_to\_mesh} may exhibit non-deterministic behavior due to Poisson reconstruction internal parameters.
+\end{enumerate}
+
+\newpage
+
+% =============================================================================
+\section{API Summary}
+% =============================================================================
+
+\begin{table}[H]
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llP{4.5cm}l}
+\toprule
+\textbf{Category} & \textbf{Function} & \textbf{Returns} & \textbf{Line} \\
+\midrule
+Load & \texttt{load\_mesh} & \texttt{TriangleMesh | (mesh, min, max, dims)} & 122 \\
+     & \texttt{load\_voxel} & \texttt{np.ndarray} & 163 \\
+\midrule
+Conversion & \texttt{mesh\_to\_voxel} & \texttt{np.ndarray | (vox, scale, min, max, ctr)} & 216 \\
+\midrule
+Morphology & \texttt{binary\_dilation} & \texttt{np.ndarray (int8)} & 454 \\
+\midrule
+Reconstruction & \texttt{high\_quality\_voxel\_to\_mesh} & \texttt{TriangleMesh} & 660 \\
+\midrule
+Utility & \texttt{create\_voxel\_grid} & \texttt{np.ndarray (bool)} & 951 \\
+        & \texttt{add\_line\_to\_voxel} & \texttt{np.ndarray (in-place)} & 955 \\
+        & \texttt{find\_closest\_to\_origin} & \texttt{(vector, index)} & 1195 \\
+        & \texttt{get\_closest\_to\_origin} & \texttt{vector} & 1219 \\
+\midrule
+Damage & \texttt{deformation} & \texttt{np.ndarray} & 1234 \\
+       & \texttt{erotion\_general} & \texttt{np.ndarray} & 1471 \\
+       & \texttt{rotate\_voxel} & \texttt{np.ndarray} & 1702 \\
+       & \texttt{rotate\_voxel\_inv} & \texttt{np.ndarray} & 1963 \\
+       & \texttt{null\_planes} & \texttt{np.ndarray} & 2209 \\
+       & \texttt{propagator\_fracture} & \texttt{np.ndarray | [arr, arr]} & 2227 \\
+\midrule
+3D Viz & \texttt{plot\_voxels} & None (Plotly) & 290 \\
+       & \texttt{plot\_meshes} & None (Plotly) & 843 \\
+\midrule
+2D Viz & \texttt{plot\_2d\_perspective} & None | str (save\_path) & 2511 \\
+       & \texttt{plot\_2d\_perspective\_2samples} & None | str (save\_path) & 2682 \\
+\midrule
+t-SNE & \texttt{tsne\_visualization} & None (plt.show) & 2889 \\
+      & \texttt{tsne\_compare} & None | str (save\_path) & 2938 \\
+\midrule
+Save & \texttt{save\_mesh} & None & 3037 \\
+     & \texttt{save\_voxel} & None & 3138 \\
+\bottomrule
+\end{tabular}%
+}
+\normalsize
+\end{table}
+
+\textbf{Total: 21 public functions} across 7 categories.
+
+\end{document}
