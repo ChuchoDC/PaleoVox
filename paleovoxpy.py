@@ -2888,7 +2888,7 @@ def plot_2d_perspective_2samples(voxel_array_1, voxel_array_2, axis=['x', 'y'],
 
     plt.xlabel('Axis: {}'.format(str.upper(axis[0])))
     plt.ylabel('Axis: {}'.format(str.upper(axis[1])))
-    plt.legend()
+    plt.legend(fontsize=8, markerscale=5)  # reduce from default ~10 to 8
 
     if save_path is not None:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')

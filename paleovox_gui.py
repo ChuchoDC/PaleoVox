@@ -102,6 +102,10 @@ class PaleoVoxGUI(QMainWindow):
         self.scale_info = None
         self.fracture_pattern = None
         self.voxel_display_color = (0.2, 0.2, 0.8)
+        self.external_voxel1 = None
+        self.external_voxel2 = None
+        self.external_path1 = None
+        self.external_path2 = None
         self._init_ui()
         self._update_button_states()
 
@@ -690,6 +694,46 @@ class PaleoVoxGUI(QMainWindow):
         self.btn_2d_comparison.clicked.connect(self._on_generate_2d_comparison)
         layout.addWidget(self.btn_2d_comparison)
 
+        sep2 = QFrame()
+        sep2.setFrameShape(QFrame.HLine)
+        sep2.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(sep2)
+
+        ext_label = QLabel("External Voxel Comparison (optional)")
+        ext_label.setStyleSheet("font-weight: bold; margin-top: 4px;")
+        layout.addWidget(ext_label)
+
+        self.chk_use_external = QCheckBox("Use External Voxels for Comparison")
+        self.chk_use_external.setToolTip(
+            "When checked, the comparison uses two externally loaded .npy voxel "
+            "files instead of the original vs current voxels."
+        )
+        layout.addWidget(self.chk_use_external)
+
+        ext_row1 = QHBoxLayout()
+        self.drop_external1 = DropZone()
+        self.drop_external1.setText("Drop Voxel A (.npy) here\n\n— or click to browse —")
+        self.drop_external1.setMinimumHeight(80)
+        self.drop_external1.file_dropped.connect(self._on_load_external_voxel1)
+        ext_row1.addWidget(self.drop_external1)
+        self.lbl_ext1 = QLabel("Voxel A: —")
+        self.lbl_ext1.setWordWrap(True)
+        self.lbl_ext1.setStyleSheet("font-size: 10px; color: #666;")
+        ext_row1.addWidget(self.lbl_ext1)
+        layout.addLayout(ext_row1)
+
+        ext_row2 = QHBoxLayout()
+        self.drop_external2 = DropZone()
+        self.drop_external2.setText("Drop Voxel B (.npy) here\n\n— or click to browse —")
+        self.drop_external2.setMinimumHeight(80)
+        self.drop_external2.file_dropped.connect(self._on_load_external_voxel2)
+        ext_row2.addWidget(self.drop_external2)
+        self.lbl_ext2 = QLabel("Voxel B: —")
+        self.lbl_ext2.setWordWrap(True)
+        self.lbl_ext2.setStyleSheet("font-size: 10px; color: #666;")
+        ext_row2.addWidget(self.lbl_ext2)
+        layout.addLayout(ext_row2)
+
         return group
 
     def _on_color_changed(self):
@@ -756,6 +800,8 @@ class PaleoVoxGUI(QMainWindow):
         has_reconstructed = self.reconstructed_mesh is not None
         has_original = self.original_mesh is not None
         has_original_voxel = self.original_voxel is not None
+        has_external_voxels = (self.external_voxel1 is not None and
+                               self.external_voxel2 is not None)
 
         self.btn_load.setEnabled(has_path)
         self.btn_to_voxel.setEnabled(has_mesh)
@@ -776,7 +822,7 @@ class PaleoVoxGUI(QMainWindow):
         self.btn_tsne.setEnabled(has_original_voxel and has_voxel)
         self.btn_save_deformed_voxels.setEnabled(has_voxel)
         self.btn_2d_single.setEnabled(has_voxel)
-        self.btn_2d_comparison.setEnabled(has_original_voxel and has_voxel)
+        self.btn_2d_comparison.setEnabled((has_original_voxel and has_voxel) or has_external_voxels)
 
     def _on_browse(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -800,9 +846,20 @@ class PaleoVoxGUI(QMainWindow):
         self.bounds = None
         self.scale_info = None
         self.fracture_pattern = None
+        self.external_voxel1 = None
+        self.external_voxel2 = None
+        self.external_path1 = None
+        self.external_path2 = None
         self.lbl_recon_info.setText("Reconstructed: —")
         self.drop_zone._apply_style("idle")
         self.drop_zone.setText("Drop .ply, .obj or .npy file here\n\n— or click to browse —")
+        self.drop_external1._apply_style("idle")
+        self.drop_external1.setText("Drop Voxel A (.npy) here\n\n— or click to browse —")
+        self.lbl_ext1.setText("Voxel A: —")
+        self.drop_external2._apply_style("idle")
+        self.drop_external2.setText("Drop Voxel B (.npy) here\n\n— or click to browse —")
+        self.lbl_ext2.setText("Voxel B: —")
+        self.chk_use_external.setChecked(False)
         self._update_info_panel()
         self._update_button_states()
         self._status("Reset — ready for new file")
@@ -1285,8 +1342,23 @@ class PaleoVoxGUI(QMainWindow):
             self._show_error("2D Perspective Error", f"Failed to generate 2D perspective:\n{e}")
 
     def _on_generate_2d_comparison(self):
-        if self.original_voxel is None or self.voxel is None:
-            return
+        use_external = self.chk_use_external.isChecked()
+        if use_external:
+            if self.external_voxel1 is None or self.external_voxel2 is None:
+                self._show_error("2D Comparison Error",
+                                 "Both external voxel files must be loaded for comparison.")
+                return
+            vox_a = self.external_voxel1
+            vox_b = self.external_voxel2
+            label_a = "Voxel A"
+            label_b = "Voxel B"
+        else:
+            if self.original_voxel is None or self.voxel is None:
+                return
+            vox_a = self.original_voxel
+            vox_b = self.voxel
+            label_a = "Original"
+            label_b = "Current"
         try:
             axis_str = self.combo_2d_axis.currentText()
             axis_map = {"XY": ["x", "y"], "XZ": ["x", "z"], "YZ": ["y", "z"]}
@@ -1304,9 +1376,9 @@ class PaleoVoxGUI(QMainWindow):
                 tmp_path = tmp.name
 
             pv.plot_2d_perspective_2samples(
-                self.original_voxel, self.voxel,
+                vox_a, vox_b,
                 axis=axis, colors=colors, markers=markers,
-                sizes=sizes, labels=["Original", "Current"],
+                sizes=sizes, labels=[label_a, label_b],
                 save_path=tmp_path
             )
 
@@ -1340,6 +1412,40 @@ class PaleoVoxGUI(QMainWindow):
             self._status(f"2D comparison ({axis_str}) complete")
         except Exception as e:
             self._show_error("2D Comparison Error", f"Failed to generate 2D comparison:\n{e}")
+
+    def _on_load_external_voxel1(self, path):
+        try:
+            if not path.lower().endswith('.npy'):
+                self._show_error("Load Error", "Only .npy files are supported for external voxels.")
+                return
+            self.external_voxel1 = pv.load_voxel(path)
+            self.external_path1 = path
+            fname = os.path.basename(path)
+            self.lbl_ext1.setText(f"Voxel A: {fname}  ({self.external_voxel1.shape})")
+            self.drop_external1._apply_style("loaded")
+            self.drop_external1.setText(f"Loaded:\n{fname}")
+            self._update_button_states()
+            occupied = int(np.sum(self.external_voxel1 > 0))
+            self._status(f"Loaded external Voxel A: {fname} — {self.external_voxel1.shape}, {occupied:,} voxels")
+        except Exception as e:
+            self._show_error("Load Error", f"Failed to load external voxel A:\n{e}")
+
+    def _on_load_external_voxel2(self, path):
+        try:
+            if not path.lower().endswith('.npy'):
+                self._show_error("Load Error", "Only .npy files are supported for external voxels.")
+                return
+            self.external_voxel2 = pv.load_voxel(path)
+            self.external_path2 = path
+            fname = os.path.basename(path)
+            self.lbl_ext2.setText(f"Voxel B: {fname}  ({self.external_voxel2.shape})")
+            self.drop_external2._apply_style("loaded")
+            self.drop_external2.setText(f"Loaded:\n{fname}")
+            self._update_button_states()
+            occupied = int(np.sum(self.external_voxel2 > 0))
+            self._status(f"Loaded external Voxel B: {fname} — {self.external_voxel2.shape}, {occupied:,} voxels")
+        except Exception as e:
+            self._show_error("Load Error", f"Failed to load external voxel B:\n{e}")
 
     def _on_save_2d_image(self, source_path):
         default_name = ""
