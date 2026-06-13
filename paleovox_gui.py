@@ -469,11 +469,21 @@ class PaleoVoxGUI(QMainWindow):
         self.btn_save_mesh = QPushButton("Save Mesh")
         self.btn_save_mesh.clicked.connect(self.on_save_mesh)
         row.addWidget(self.btn_save_mesh)
+        vsl.addLayout(row)
 
+        mc_row = QHBoxLayout()
+        self.chk_voxel_mc = QCheckBox("Marching Cubes (Voxel → Mesh)")
+        self.chk_voxel_mc.setToolTip("When checked, voxels are converted to a mesh using marching cubes and displayed with PBR shading")
+        mc_row.addWidget(self.chk_voxel_mc)
+        mc_row.addStretch()
+        vsl.addLayout(mc_row)
+
+        save_row = QHBoxLayout()
         self.btn_save_voxel = QPushButton("Save Voxel")
         self.btn_save_voxel.clicked.connect(self.on_save_voxel)
-        row.addWidget(self.btn_save_voxel)
-        vsl.addLayout(row)
+        save_row.addWidget(self.btn_save_voxel)
+        save_row.addStretch()
+        vsl.addLayout(save_row)
 
         return group
 
@@ -537,6 +547,13 @@ class PaleoVoxGUI(QMainWindow):
         self.btn_compare_voxels = QPushButton("Compare Voxels")
         self.btn_compare_voxels.clicked.connect(self._on_compare_voxels)
         vl.addWidget(self.btn_compare_voxels)
+
+        mc_comp_row = QHBoxLayout()
+        self.chk_voxel_comp_mc = QCheckBox("Marching Cubes (Voxel → Mesh)")
+        self.chk_voxel_comp_mc.setToolTip("When checked, voxels are converted to meshes using marching cubes and displayed with PBR shading")
+        mc_comp_row.addWidget(self.chk_voxel_comp_mc)
+        mc_comp_row.addStretch()
+        vl.addLayout(mc_comp_row)
 
         return group
 
@@ -1082,34 +1099,48 @@ class PaleoVoxGUI(QMainWindow):
         mesh = self.reconstructed_mesh if self.reconstructed_mesh is not None else self.mesh
         if mesh is not None:
             mesh_copy = o3d.geometry.TriangleMesh(mesh)
-            mesh_copy.paint_uniform_color(self.voxel_display_color)
+            color_name = self.combo_color.currentText().lower()
             threading.Thread(
-                target=lambda: o3d.visualization.draw_geometries(
-                    [mesh_copy], window_name="PaleoVox — Mesh View",
-                    width=1024, height=768
+                target=lambda: pv.visualize_mesh(
+                    [mesh_copy], colors=[color_name],
+                    title="PaleoVox — Mesh View"
                 ),
                 daemon=True
             ).start()
 
     def on_view_voxels(self):
         if self.voxel is not None:
-            occupied = np.argwhere(self.voxel > 0)
-            if len(occupied) == 0:
-                self._status("No occupied voxels to display")
-                return
-            pcd = o3d.geometry.PointCloud()
-            pcd.points = o3d.utility.Vector3dVector(occupied.astype(np.float64))
-            pcd.paint_uniform_color(self.voxel_display_color)
-            voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(
-                pcd, voxel_size=1.0
-            )
-            threading.Thread(
-                target=lambda: o3d.visualization.draw_geometries(
-                    [voxel_grid], window_name="PaleoVox — Voxel View",
-                    width=1024, height=768
-                ),
-                daemon=True
-            ).start()
+            if self.chk_voxel_mc.isChecked():
+                occupied = int(np.sum(self.voxel > 0))
+                if occupied == 0:
+                    self._status("No occupied voxels to display")
+                    return
+                self._status(f"Converting {occupied:,} voxels to mesh (marching cubes)...")
+                vox = self.voxel
+                color_name = self.combo_color.currentText().lower()
+                def _run():
+                    mesh = pv.voxel_to_mesh_mc(vox)
+                    pv.visualize_mesh([mesh], colors=[color_name],
+                                      title="PaleoVox — Voxel View (Marching Cubes)")
+                threading.Thread(target=_run, daemon=True).start()
+            else:
+                occupied = np.argwhere(self.voxel > 0)
+                if len(occupied) == 0:
+                    self._status("No occupied voxels to display")
+                    return
+                pcd = o3d.geometry.PointCloud()
+                pcd.points = o3d.utility.Vector3dVector(occupied.astype(np.float64))
+                pcd.paint_uniform_color(self.voxel_display_color)
+                voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(
+                    pcd, voxel_size=1.0
+                )
+                threading.Thread(
+                    target=lambda: o3d.visualization.draw_geometries(
+                        [voxel_grid], window_name="PaleoVox — Voxel View",
+                        width=1024, height=768
+                    ),
+                    daemon=True
+                ).start()
 
     def _on_reconstruct(self):
         if self.voxel is None:
@@ -1145,27 +1176,30 @@ class PaleoVoxGUI(QMainWindow):
             return
         try:
             vis_mode = self.combo_compare_vis.currentText()
-            geoms = []
+            meshes = []
+            colors = []
+            names = []
             title = "PaleoVox — "
             if vis_mode in ("Both", "Original Only"):
                 orig = o3d.geometry.TriangleMesh(self.original_mesh)
-                orig.paint_uniform_color((0.2, 0.2, 0.8))
-                geoms.append(orig)
+                meshes.append(orig)
+                colors.append((0.2, 0.2, 0.8))
+                names.append("Original")
                 title += "Original (Blue)"
             if vis_mode in ("Both", "Reconstructed Only"):
                 recon = o3d.geometry.TriangleMesh(self.reconstructed_mesh)
-                recon.paint_uniform_color((0.8, 0.2, 0.2))
-                geoms.append(recon)
+                meshes.append(recon)
+                colors.append((0.8, 0.2, 0.2))
+                names.append("Reconstructed")
                 if vis_mode == "Both":
                     title += " vs "
                 title += "Reconstructed (Red)"
-            if not geoms:
+            if not meshes:
                 return
             self._status(f"Displaying comparison: {vis_mode}")
             threading.Thread(
-                target=lambda: o3d.visualization.draw_geometries(
-                    geoms, window_name=title,
-                    width=1024, height=768
+                target=lambda: pv.visualize_mesh(
+                    meshes, colors=colors, names=names, title=title
                 ),
                 daemon=True
             ).start()
@@ -1177,38 +1211,67 @@ class PaleoVoxGUI(QMainWindow):
             return
         try:
             vis_mode = self.combo_voxel_vis.currentText()
-            geoms = []
-            title = "PaleoVox — "
-            if vis_mode in ("Both", "Original Only"):
-                occ_orig = np.argwhere(self.original_voxel > 0)
-                if len(occ_orig) > 0:
-                    pcd_orig = o3d.geometry.PointCloud()
-                    pcd_orig.points = o3d.utility.Vector3dVector(occ_orig.astype(np.float64))
-                    pcd_orig.paint_uniform_color((0.2, 0.2, 0.8))
-                    vg_orig = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd_orig, voxel_size=1.0)
-                    geoms.append(vg_orig)
-                    title += "Original (Blue)"
-            if vis_mode in ("Both", "Current Only"):
-                occ_curr = np.argwhere(self.voxel > 0)
-                if len(occ_curr) > 0:
-                    pcd_curr = o3d.geometry.PointCloud()
-                    pcd_curr.points = o3d.utility.Vector3dVector(occ_curr.astype(np.float64))
-                    pcd_curr.paint_uniform_color((0.8, 0.2, 0.2))
-                    vg_curr = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd_curr, voxel_size=1.0)
-                    geoms.append(vg_curr)
-                    if vis_mode == "Both":
-                        title += " vs "
-                    title += "Current (Red)"
-            if not geoms:
-                return
-            self._status(f"Displaying voxel comparison: {vis_mode}")
-            threading.Thread(
-                target=lambda: o3d.visualization.draw_geometries(
-                    geoms, window_name=title,
-                    width=1024, height=768
-                ),
-                daemon=True
-            ).start()
+
+            if self.chk_voxel_comp_mc.isChecked():
+                self._status("Converting voxels to meshes (marching cubes)...")
+                vox_orig = self.original_voxel
+                vox_curr = self.voxel
+
+                def _run():
+                    meshes = []
+                    colors = []
+                    names = []
+                    title = "PaleoVox — "
+                    if vis_mode in ("Both", "Original Only"):
+                        meshes.append(pv.voxel_to_mesh_mc(vox_orig))
+                        colors.append((0.2, 0.2, 0.8))
+                        names.append("Original")
+                        title += "Original (Blue)"
+                    if vis_mode in ("Both", "Current Only"):
+                        meshes.append(pv.voxel_to_mesh_mc(vox_curr))
+                        colors.append((0.8, 0.2, 0.2))
+                        names.append("Current")
+                        if vis_mode == "Both":
+                            title += " vs "
+                        title += "Current (Red)"
+                    if meshes:
+                        pv.visualize_mesh(meshes, colors=colors,
+                                          names=names, title=title)
+
+                threading.Thread(target=_run, daemon=True).start()
+            else:
+                geoms = []
+                title = "PaleoVox — "
+                if vis_mode in ("Both", "Original Only"):
+                    occ_orig = np.argwhere(self.original_voxel > 0)
+                    if len(occ_orig) > 0:
+                        pcd_orig = o3d.geometry.PointCloud()
+                        pcd_orig.points = o3d.utility.Vector3dVector(occ_orig.astype(np.float64))
+                        pcd_orig.paint_uniform_color((0.2, 0.2, 0.8))
+                        vg_orig = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd_orig, voxel_size=1.0)
+                        geoms.append(vg_orig)
+                        title += "Original (Blue)"
+                if vis_mode in ("Both", "Current Only"):
+                    occ_curr = np.argwhere(self.voxel > 0)
+                    if len(occ_curr) > 0:
+                        pcd_curr = o3d.geometry.PointCloud()
+                        pcd_curr.points = o3d.utility.Vector3dVector(occ_curr.astype(np.float64))
+                        pcd_curr.paint_uniform_color((0.8, 0.2, 0.2))
+                        vg_curr = o3d.geometry.VoxelGrid.create_from_point_cloud(pcd_curr, voxel_size=1.0)
+                        geoms.append(vg_curr)
+                        if vis_mode == "Both":
+                            title += " vs "
+                        title += "Current (Red)"
+                if not geoms:
+                    return
+                self._status(f"Displaying voxel comparison: {vis_mode}")
+                threading.Thread(
+                    target=lambda: o3d.visualization.draw_geometries(
+                        geoms, window_name=title,
+                        width=1024, height=768
+                    ),
+                    daemon=True
+                ).start()
         except Exception as e:
             self._show_error("Voxel Comparison Error", f"Failed to compare voxels:\n{e}")
 

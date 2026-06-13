@@ -6,3 +6,4 @@ seaborn
 plotly
 scikit-learn
 PyQt5
+scikit-image
