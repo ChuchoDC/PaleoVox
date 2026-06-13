@@ -657,184 +657,145 @@ def binary_dilation(array_3d, iterations=2):
 
 """## Voxel To Mesh"""
 
-def high_quality_voxel_to_mesh(voxel_array, voxel_size=1.0, 
-                                target_scale=None, original_bounds=None,
-                                solidify=True,
-                                jitter_amount=0.4,
-                                sor_neighbors=20, sor_std_ratio=1.5,
-                                density_quantile=0.25,
-                                min_component_ratio=0.01,
-                                max_triangles=100000):
+def high_quality_voxel_to_mesh(voxel_array,
+                                voxel_size=1.0,
+                                target_scale=None,
+                                original_bounds=None,
+                                closing_radius=3,
+                                gaussian_sigma=1.2,
+                                level=None,
+                                fix_holes=True,
+                                max_triangles=None):
     """
-    Convert a voxel grid to a high-quality 3D mesh.
+    Convert a voxel grid to a watertight 3D mesh using Marching Cubes.
+
+    Pipeline:
+    1. Morphological closing  →  connects scattered volume fragments
+    2. Keep largest component  →  discards noise and debris
+    3. Gaussian smooth         →  softens voxel stair-stepping
+    4. Marching Cubes           →  continuous isosurface
+    5. pymeshfix                →  closes residual holes (watertight)
+    6. Scale / translate        →  restores original dimensions & position
+    7. Optional decimation      →  lighter mesh for visualization
 
     Parameters
     ----------
     voxel_array : numpy.ndarray
         Binary voxel array of shape (n, n, n).
     voxel_size : float, default=1.0
-        Physical size of each voxel in world units.
+        Physical size of each voxel in world units (used as spacing).
     target_scale : tuple or array, optional
-        If provided, scales the reconstructed mesh to match these dimensions.
-        Typically the original mesh's dimensions (max_bound - min_bound).
+        If provided, scales the reconstructed mesh to match these
+        dimensions (max_bound - min_bound from the original mesh).
     original_bounds : tuple, optional
-        If provided, translates the mesh to match original position.
+        If provided, translates the mesh to match the original position.
         Should be (min_bound, max_bound) from the original mesh.
-    solidify : bool, default=True
-        If True, pre-processes voxels with morphological closing and hole
-        filling to create a solid volume. Eliminates surface porosity and
-        internal voids by ensuring the Poisson solver has proper inside/outside
-        information.
-    jitter_amount : float, default=0.4
-        Random perturbation factor applied to point positions to break grid
-        regularity and produce smoother organic surfaces. Higher values create
-        more natural surfaces but may alter fine details. Value is relative
-        to voxel_size (0.4 means +/-40% of voxel_size). Set to 0 to disable.
-    sor_neighbors : int, default=20
-        Number of neighbors for Statistical Outlier Removal. Removes isolated
-        noise voxels before reconstruction. Set to 0 to disable SOR.
-    sor_std_ratio : float, default=1.5
-        Standard deviation multiplier for SOR. Lower values remove more points.
-    density_quantile : float, default=0.25
-        Quantile threshold for Poisson density filtering (range 0.0 - 1.0).
-        Vertices with density below this quantile are removed. Higher values
-        eliminate more low-confidence floating geometry.
-    min_component_ratio : float, default=0.01
-        Minimum size ratio for connected components. Triangle clusters smaller
-        than this fraction of the largest cluster are removed as topological
-        noise. Set to 0 to disable.
-    max_triangles : int, default=100000
-        Maximum number of triangles. If the mesh exceeds this, quadric edge
-        collapse decimation is applied to reduce mesh density while preserving
-        shape. Set to None to disable decimation.
+    closing_radius : int, default=3
+        Radius for morphological closing. Increase if the mesh comes out
+        in disconnected fragments; decrease if distinct structures fuse.
+    gaussian_sigma : float, default=1.2
+        Sigma for Gaussian smoothing before Marching Cubes. Higher values
+        produce rounder surfaces.
+    level : float, optional
+        Isovalue for Marching Cubes. Auto-computed (midpoint) if None.
+    fix_holes : bool, default=True
+        If True, applies pymeshfix to close topological holes and produce
+        a guaranteed watertight mesh.
+    max_triangles : int, optional
+        If set, applies quadric edge collapse decimation to reduce the mesh
+        to at most this many triangles.
 
     Returns
     -------
     open3d.geometry.TriangleMesh
-        Reconstructed triangle mesh.
+        Reconstructed (watertight if fix_holes=True) triangle mesh.
     """
-    voxel = voxel_array
+    from skimage import measure
+    from skimage.filters import gaussian
+    from skimage.measure import label
+    from skimage.morphology import closing, ball
 
-    if solidify:
-        structure = ndimage.generate_binary_structure(3, 1)
-        voxel = ndimage.binary_dilation(voxel, structure=structure, iterations=2)
-        voxel = ndimage.binary_erosion(voxel, structure=structure, iterations=2)
-        voxel = ndimage.binary_fill_holes(voxel)
-        print(f"Solidify: {np.sum(voxel_array)} -> {np.sum(voxel)} occupied voxels")
+    data = voxel_array.astype(bool)
 
-    occupied_indices = np.argwhere(voxel > 0)
-    points = occupied_indices.astype(np.float64) * voxel_size
+    # ── Step 1: Morphological closing ──
+    closed = closing(data, ball(closing_radius))
+    lbl = label(closed)
+    n_components = lbl.max()
+    print(f"Closing r={closing_radius}: {n_components} connected components")
 
-    print(f"Processing {len(points)} occupied voxels")
+    # ── Step 2: Keep largest component ──
+    sizes = np.bincount(lbl.ravel())
+    sizes[0] = 0
+    main_id = sizes.argmax()
+    mask = (lbl == main_id).astype(float)
+    pct = mask.sum() / closed.sum() * 100
+    print(f"Largest component: {int(mask.sum()):,} voxels "
+          f"({pct:.1f}% of closed volume)")
+
+    # ── Step 3: Gaussian smooth + Marching Cubes ──
+    smoothed = gaussian(mask, sigma=gaussian_sigma)
+    if level is None:
+        level = (smoothed.min() + smoothed.max()) / 2.0
+
+    spacing = (voxel_size, voxel_size, voxel_size)
+    verts, faces, normals, _ = measure.marching_cubes(
+        smoothed, level=level, spacing=spacing
+    )
+    print(f"Marching Cubes: {len(verts):,} verts, {len(faces):,} faces")
+
+    mesh = o3d.geometry.TriangleMesh()
+    mesh.vertices = o3d.utility.Vector3dVector(verts.astype(np.float64))
+    mesh.triangles = o3d.utility.Vector3iVector(faces.astype(np.int32))
+    mesh.vertex_normals = o3d.utility.Vector3dVector(normals.astype(np.float64))
+    mesh.compute_triangle_normals()
+
+    # ── Step 4: pymeshfix hole filling ──
+    if fix_holes:
+        import pymeshfix
+        verts_np = np.asarray(mesh.vertices).astype(np.float32)
+        faces_np = np.asarray(mesh.triangles).astype(np.int32)
+        mfix = pymeshfix.MeshFix(verts_np, faces_np)
+        print("pymeshfix: repairing...")
+        mfix.repair()
+        vf = mfix.v
+        ff = mfix.f
+        mesh = o3d.geometry.TriangleMesh()
+        mesh.vertices = o3d.utility.Vector3dVector(vf.astype(np.float64))
+        mesh.triangles = o3d.utility.Vector3iVector(ff.astype(np.int32))
+        mesh.compute_vertex_normals()
+        mesh.compute_triangle_normals()
+        print(f"After pymeshfix: {len(mesh.vertices):,} verts, "
+              f"{len(mesh.triangles):,} faces")
+
+    # ── Step 5: Scale & translate to original dimensions ──
+    verts_arr = np.asarray(mesh.vertices)
 
     if target_scale is not None:
-        current_bounds = np.array([points.min(axis=0), points.max(axis=0)])
-        current_scale = current_bounds[1] - current_bounds[0]
+        current_min = verts_arr.min(axis=0)
+        current_max = verts_arr.max(axis=0)
+        current_scale = current_max - current_min
         scale_factor = target_scale / current_scale
-        points = points * scale_factor
+        verts_arr = verts_arr * scale_factor
         print(f"Applied scale factor: {scale_factor}")
-
-    if jitter_amount > 0:
-        effective_jitter = voxel_size * jitter_amount
-        if target_scale is not None:
-            effective_jitter = effective_jitter * np.mean(scale_factor)
-        jitter = np.random.uniform(-effective_jitter, effective_jitter, points.shape)
-        points = points + jitter
-
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
 
     if original_bounds is not None:
         original_min, original_max = original_bounds
         original_center = (original_min + original_max) / 2
-        current_center = points.mean(axis=0)
+        current_center = verts_arr.mean(axis=0)
         translation = original_center - current_center
-        pcd.translate(translation)
+        verts_arr = verts_arr + translation
         print(f"Applied translation: {translation}")
 
-    if sor_neighbors > 0 and len(pcd.points) > sor_neighbors:
-        pcd, _ = pcd.remove_statistical_outlier(
-            nb_neighbors=sor_neighbors,
-            std_ratio=sor_std_ratio
-        )
-        print(f"SOR: {len(np.asarray(pcd.points))} points remaining")
+    if target_scale is not None or original_bounds is not None:
+        mesh.vertices = o3d.utility.Vector3dVector(verts_arr.astype(np.float64))
+        mesh.compute_vertex_normals()
+        mesh.compute_triangle_normals()
 
-    target_point_count = 500000
-    if len(pcd.points) > target_point_count:
-        current_volume = len(pcd.points) * (voxel_size ** 3)
-        target_volume = target_point_count * (voxel_size ** 3)
-        scale_factor_down = (target_volume / current_volume) ** (1/3)
-        downsample_size = voxel_size * scale_factor_down
-        pcd = pcd.voxel_down_sample(downsample_size)
-        print(f"Downsampled to {len(np.asarray(pcd.points))} points")
-
-    pcd_tree = o3d.geometry.KDTreeFlann(pcd)
-    avg_dist = 0
-    n_samples = min(1000, len(pcd.points))
-    for i in range(n_samples):
-        [k, idx, _] = pcd_tree.search_knn_vector_3d(pcd.points[i], 2)
-        if len(idx) > 1:
-            dist = np.linalg.norm(
-                np.asarray(pcd.points)[idx[0]] - np.asarray(pcd.points)[idx[1]]
-            )
-            avg_dist += dist
-    avg_dist /= max(1, n_samples)
-
-    pcd.estimate_normals(
-        search_param=o3d.geometry.KDTreeSearchParamHybrid(
-            radius=avg_dist * 5,
-            max_nn=50
-        )
-    )
-
-    pcd.orient_normals_consistent_tangent_plane(k=30)
-
-    optimal_depth = min(12, int(np.log2(len(pcd.points)) - 2))
-    print(f"Using Poisson depth: {optimal_depth}")
-
-    with o3d.utility.VerbosityContextManager(
-            o3d.utility.VerbosityLevel.Debug) as cm:
-        mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
-            pcd,
-            depth=optimal_depth,
-            width=0,
-            scale=1.1,
-            linear_fit=True,
-            n_threads=-1
-        )
-
-    densities = np.asarray(densities)
-    density_threshold = np.percentile(densities, density_quantile * 100)
-    vertices_to_remove = densities < density_threshold
-    mesh.remove_vertices_by_mask(vertices_to_remove)
-    print(f"Density filter (q={density_quantile:.2f}): "
-          f"{len(mesh.vertices)} vertices, {len(mesh.triangles)} triangles")
-
-    mesh.remove_degenerate_triangles()
-    mesh.remove_duplicated_triangles()
-    mesh.remove_duplicated_vertices()
-
-    if min_component_ratio > 0 and len(mesh.triangles) > 0:
-        triangle_clusters, cluster_n_triangles, _ = mesh.cluster_connected_triangles()
-        cluster_n_triangles = np.asarray(cluster_n_triangles)
-        triangle_clusters = np.asarray(triangle_clusters)
-        largest_cluster = cluster_n_triangles.max()
-        min_cluster_size = int(largest_cluster * min_component_ratio)
-        if min_cluster_size > 0:
-            triangles_to_keep = cluster_n_triangles[triangle_clusters] >= min_cluster_size
-            mesh.remove_triangles_by_mask(~triangles_to_keep)
-            mesh.remove_unreferenced_vertices()
-            print(f"Component filter (min_ratio={min_component_ratio}): "
-                  f"{len(mesh.vertices)} vertices, {len(mesh.triangles)} triangles")
-
+    # ── Step 6: Optional decimation ──
     if max_triangles is not None and len(mesh.triangles) > max_triangles:
         mesh = mesh.simplify_quadric_decimation(max_triangles)
-        print(f"Decimation to {max_triangles}: "
-              f"{len(mesh.vertices)} vertices, {len(mesh.triangles)} triangles")
-
-    mesh = mesh.filter_smooth_taubin(number_of_iterations=10,
-                                     lambda_filter=0.5,
-                                     mu=-0.53)
+        print(f"Decimated to {max_triangles}: "
+              f"{len(mesh.vertices):,} verts, {len(mesh.triangles):,} faces")
 
     return mesh
 
