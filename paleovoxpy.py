@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import time
 import random
+import threading
 
 """## Seaborn"""
 
@@ -3277,6 +3278,9 @@ _PBR_BACKGROUNDS = {
     "white"  : [1.00, 1.00, 1.00, 1.0],
 }
 
+_PBR_APP_INITIALIZED = False
+_PBR_APP_LOCK = threading.Lock()
+
 def _pbr_make_material(color, roughness=None, metallic=None):
     if isinstance(color, str):
         preset = _PBR_PRESETS.get(color.lower(), _PBR_PRESETS["bone"])
@@ -3340,7 +3344,10 @@ def visualize_mesh(meshes, colors=None, names=None, bg="meshlab",
         names = [f"mesh_{i}" for i in range(len(meshes))]
 
     app = o3d.visualization.gui.Application.instance
-    app.initialize()
+    global _PBR_APP_INITIALIZED
+    if not _PBR_APP_INITIALIZED:
+        app.initialize()
+        _PBR_APP_INITIALIZED = True
 
     win = o3d.visualization.O3DVisualizer(title, 1280, 900)
     win.show_settings = True
@@ -3373,4 +3380,5 @@ def visualize_mesh(meshes, colors=None, names=None, bg="meshlab",
 
     win.show_axes = False
     app.add_window(win)
-    app.run()
+    with _PBR_APP_LOCK:
+        app.run()
