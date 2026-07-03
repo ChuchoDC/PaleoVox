@@ -684,6 +684,13 @@ class PaleoVoxGUI(QMainWindow):
         self.spin_2d_cmp_size1.setSingleStep(0.5)
         self.spin_2d_cmp_size1.setValue(1.0)
         comp_row1.addWidget(self.spin_2d_cmp_size1)
+        comp_row1.addWidget(QLabel("Alpha:"))
+        self.spin_2d_cmp_alpha1 = QDoubleSpinBox()
+        self.spin_2d_cmp_alpha1.setRange(0.0, 1.0)
+        self.spin_2d_cmp_alpha1.setSingleStep(0.05)
+        self.spin_2d_cmp_alpha1.setValue(1.0)
+        self.spin_2d_cmp_alpha1.setToolTip("Transparency for Orig/Voxel A (0 = invisible, 1 = opaque)")
+        comp_row1.addWidget(self.spin_2d_cmp_alpha1)
         comp_row1.addStretch()
         layout.addLayout(comp_row1)
 
@@ -704,6 +711,13 @@ class PaleoVoxGUI(QMainWindow):
         self.spin_2d_cmp_size2.setSingleStep(0.5)
         self.spin_2d_cmp_size2.setValue(1.0)
         comp_row2.addWidget(self.spin_2d_cmp_size2)
+        comp_row2.addWidget(QLabel("Alpha:"))
+        self.spin_2d_cmp_alpha2 = QDoubleSpinBox()
+        self.spin_2d_cmp_alpha2.setRange(0.0, 1.0)
+        self.spin_2d_cmp_alpha2.setSingleStep(0.05)
+        self.spin_2d_cmp_alpha2.setValue(1.0)
+        self.spin_2d_cmp_alpha2.setToolTip("Transparency for Curr/Voxel B (0 = invisible, 1 = opaque)")
+        comp_row2.addWidget(self.spin_2d_cmp_alpha2)
         comp_row2.addStretch()
         layout.addLayout(comp_row2)
 
@@ -1100,13 +1114,11 @@ class PaleoVoxGUI(QMainWindow):
         if mesh is not None:
             mesh_copy = o3d.geometry.TriangleMesh(mesh)
             color_name = self.combo_color.currentText().lower()
-            threading.Thread(
-                target=lambda: pv.visualize_mesh(
-                    [mesh_copy], colors=[color_name],
-                    title="PaleoVox — Mesh View"
-                ),
-                daemon=True
-            ).start()
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(0, lambda: pv.visualize_mesh(
+                [mesh_copy], colors=[color_name],
+                title="PaleoVox — Mesh View"
+            ))
 
     def on_view_voxels(self):
         if self.voxel is not None:
@@ -1118,10 +1130,13 @@ class PaleoVoxGUI(QMainWindow):
                 self._status(f"Converting {occupied:,} voxels to mesh (marching cubes)...")
                 vox = self.voxel
                 color_name = self.combo_color.currentText().lower()
+                from PyQt5.QtCore import QTimer
                 def _run():
                     mesh = pv.voxel_to_mesh_mc(vox)
-                    pv.visualize_mesh([mesh], colors=[color_name],
-                                      title="PaleoVox — Voxel View (Marching Cubes)")
+                    QTimer.singleShot(0, lambda: pv.visualize_mesh(
+                        [mesh], colors=[color_name],
+                        title="PaleoVox — Voxel View (Marching Cubes)"
+                    ))
                 threading.Thread(target=_run, daemon=True).start()
             else:
                 occupied = np.argwhere(self.voxel > 0)
@@ -1197,12 +1212,10 @@ class PaleoVoxGUI(QMainWindow):
             if not meshes:
                 return
             self._status(f"Displaying comparison: {vis_mode}")
-            threading.Thread(
-                target=lambda: pv.visualize_mesh(
-                    meshes, colors=colors, names=names, title=title
-                ),
-                daemon=True
-            ).start()
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(0, lambda: pv.visualize_mesh(
+                meshes, colors=colors, names=names, title=title
+            ))
         except Exception as e:
             self._show_error("Comparison Error", f"Failed to compare meshes:\n{e}")
 
@@ -1235,8 +1248,10 @@ class PaleoVoxGUI(QMainWindow):
                             title += " vs "
                         title += "Current (Red)"
                     if meshes:
-                        pv.visualize_mesh(meshes, colors=colors,
-                                          names=names, title=title)
+                        from PyQt5.QtCore import QTimer
+                        QTimer.singleShot(0, lambda: pv.visualize_mesh(
+                            meshes, colors=colors, names=names, title=title
+                        ))
 
                 threading.Thread(target=_run, daemon=True).start()
             else:
@@ -1432,6 +1447,8 @@ class PaleoVoxGUI(QMainWindow):
                        self.combo_2d_cmp_marker2.currentText()]
             sizes = [self.spin_2d_cmp_size1.value(),
                      self.spin_2d_cmp_size2.value()]
+            alphas = [self.spin_2d_cmp_alpha1.value(),
+                      self.spin_2d_cmp_alpha2.value()]
 
             self._status(f"Generating 2D comparison ({axis_str})...")
 
@@ -1442,6 +1459,7 @@ class PaleoVoxGUI(QMainWindow):
                 vox_a, vox_b,
                 axis=axis, colors=colors, markers=markers,
                 sizes=sizes, labels=[label_a, label_b],
+                alphas=alphas,
                 save_path=tmp_path
             )
 

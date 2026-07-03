@@ -20,6 +20,7 @@ import seaborn as sns
 import time
 import random
 import threading
+import os
 
 """## Seaborn"""
 
@@ -758,8 +759,8 @@ def high_quality_voxel_to_mesh(voxel_array,
         mfix = pymeshfix.MeshFix(verts_np, faces_np)
         print("pymeshfix: repairing...")
         mfix.repair()
-        vf = mfix.v
-        ff = mfix.f
+        vf = mfix.points
+        ff = mfix.faces
         mesh = o3d.geometry.TriangleMesh()
         mesh.vertices = o3d.utility.Vector3dVector(vf.astype(np.float64))
         mesh.triangles = o3d.utility.Vector3iVector(ff.astype(np.int32))
@@ -2677,6 +2678,11 @@ def plot_2d_perspective(voxel_array, axis=['x', 'y'], color='blue', marker='o', 
         c=color
     )
 
+    # Mantener proporción 1:1 entre ejes: sin esto, modelos alargados o
+    # rotados se ven comprimidos/deformados porque matplotlib estira cada
+    # eje de forma independiente para llenar el cuadro de la figura.
+    plt.gca().set_aspect('equal', adjustable='box')
+
     plt.xlabel('Axis: {}'.format(str.upper(axis[0])))
     plt.ylabel('Axis: {}'.format(str.upper(axis[1])))
 
@@ -2690,6 +2696,7 @@ def plot_2d_perspective(voxel_array, axis=['x', 'y'], color='blue', marker='o', 
 def plot_2d_perspective_2samples(voxel_array_1, voxel_array_2, axis=['x', 'y'],
                                   colors=['blue', 'red'], markers=['o', 'o'],
                                   sizes=[1.0, 1.0], labels = ['V1', 'V2'],
+                                  alphas=[1.0, 1.0],
                                   save_path=None):
     """
     Plot 2D projections of two 3D voxel arrays on the same axes for comparison.
@@ -2757,6 +2764,12 @@ def plot_2d_perspective_2samples(voxel_array_1, voxel_array_2, axis=['x', 'y'],
         - Smaller values (0.1-1.0): Good for dense voxel grids
         - Larger values (2.0-10.0): Better for sparse grids or visibility
         - Different sizes can emphasize one dataset over the other
+
+    alphas : list of float, default=[1.0, 1.0]
+        List of two alpha (transparency) values, one per dataset, in the
+        range [0.0, 1.0]. 1.0 is fully opaque (original behavior); lower
+        values let the underlying dataset show through where both overlap.
+        First value applies to voxel_array_1, second to voxel_array_2.
 
     Returns
     -------
@@ -2876,6 +2889,7 @@ def plot_2d_perspective_2samples(voxel_array_1, voxel_array_2, axis=['x', 'y'],
         s=sizes[0],
         marker=markers[0],
         c=colors[0],
+        alpha=alphas[0],
         label = labels[0]
     )
 
@@ -2885,12 +2899,24 @@ def plot_2d_perspective_2samples(voxel_array_1, voxel_array_2, axis=['x', 'y'],
         s=sizes[1],
         marker=markers[1],
         c=colors[1],
+        alpha=alphas[1],
         label = labels[1]
     )
 
+    # Mantener proporción 1:1 entre ejes: sin esto, modelos alargados o
+    # rotados se ven comprimidos/deformados porque matplotlib estira cada
+    # eje de forma independiente para llenar el cuadro de la figura.
+    plt.gca().set_aspect('equal', adjustable='box')
+
     plt.xlabel('Axis: {}'.format(str.upper(axis[0])))
     plt.ylabel('Axis: {}'.format(str.upper(axis[1])))
-    plt.legend(fontsize=8, markerscale=5)  # reduce from default ~10 to 8
+    legend = plt.legend(fontsize=8, markerscale=5)  # reduce from default ~10 to 8
+    # Los marcadores de la leyenda heredan el alpha de los puntos por
+    # defecto en matplotlib; se fuerzan a opacidad total (1.0) para que la
+    # transparencia de los puntos no afecte su visibilidad en la leyenda.
+    legend_handles = getattr(legend, 'legend_handles', None) or getattr(legend, 'legendHandles', [])
+    for handle in legend_handles:
+        handle.set_alpha(1.0)
 
     if save_path is not None:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
@@ -3049,7 +3075,7 @@ def tsne_compare(voxel_original, voxel_deformed, seed: int = 42, percentage: flo
 
 """## Save Functions"""
 
-def save_mesh(mesh, path: str):
+def save_mesh(mesh, path: str, export_both: bool = True):
     """
     Save a 3D triangle mesh to a file with error handling and user feedback.
 
@@ -3142,10 +3168,67 @@ def save_mesh(mesh, path: str):
     o3d.io.read_triangle_mesh : Reading meshes from files
     high_quality_voxel_to_mesh : Generate meshes from voxel data
     plot_mesh : Visualize meshes before saving
+
+    Notes (fix de exportación)
+    ---------------------------
+    Antes de escribir el archivo se recalculan SIEMPRE las normales por
+    vértice y por triángulo (`compute_vertex_normals` / `compute_triangle_normals`)
+    y se normalizan. Esto evita el efecto "plano, sin relieve" en visores
+    externos (MeshLab, Blender, etc.): las normales pueden quedar vacías,
+    desactualizadas o mal escaladas tras operaciones como decimación,
+    reescalado/traslación o reparación de malla, y un visor externo que
+    confía en las normales del archivo (en vez de recalcularlas) mostrará
+    el modelo sin sombreado/relieve si éstas no son válidas.
+
+    Además, si `path` termina en `.ply` o `.obj` (o no tiene extensión),
+    el mesh se guarda automáticamente en AMBOS formatos (mismo nombre base),
+    ya que .ply preserva color/normales con más fidelidad y .obj es el más
+    compatible con otros programas. Si se pasa otra extensión (p. ej. .stl,
+    .glb), se conserva el comportamiento original de guardar solo ese
+    formato. Para forzar un único archivo exacto en .ply/.obj, usar
+    `export_both=False`.
     """
     try:
-        o3d.io.write_triangle_mesh(path, mesh)
-        print('Correctly saved:', path)
+        # ── Fix de orientación (causa real del aspecto "plano/sombra") ──
+        # Marching Cubes (skimage) puede generar el orden de vértices por
+        # triángulo de forma que, al calcular normales con la regla de la
+        # mano derecha (convención de Open3D), éstas queden apuntando hacia
+        # ADENTRO del mesh en vez de hacia afuera. Visto desde fuera, eso
+        # hace que la cara visible siempre reciba luz "por detrás": el
+        # término difuso se anula y el modelo se ve completamente plano y
+        # oscuro, sin relieve, en visores externos como MeshLab. Aquí se
+        # detecta con el signo del volumen (teorema de la divergencia) y,
+        # si es negativo, se invierte el sentido de los triángulos.
+        verts_np = np.asarray(mesh.vertices)
+        tris_np = np.asarray(mesh.triangles)
+        if len(tris_np) > 0:
+            v0, v1, v2 = verts_np[tris_np[:, 0]], verts_np[tris_np[:, 1]], verts_np[tris_np[:, 2]]
+            signed_volume = np.einsum('ij,ij->i', v0, np.cross(v1, v2)).sum() / 6.0
+            if signed_volume < 0:
+                mesh.triangles = o3d.utility.Vector3iVector(tris_np[:, [0, 2, 1]])
+
+        # Recalcular normales SIEMPRE antes de exportar: corrige el aspecto
+        # plano en MeshLab sin alterar la geometría ni ninguna otra función.
+        mesh.compute_vertex_normals()
+        mesh.compute_triangle_normals()
+        mesh.normalize_normals()
+
+        base, ext = os.path.splitext(path)
+        ext = ext.lower()
+
+        if export_both and ext in ('.ply', '.obj', ''):
+            targets = [base + '.ply', base + '.obj']
+        else:
+            targets = [path]
+
+        for target in targets:
+            o3d.io.write_triangle_mesh(
+                target, mesh,
+                write_vertex_normals=True,
+                write_vertex_colors=True,
+                write_triangle_uvs=True,
+            )
+            print('Correctly saved:', target)
 
     except Exception as e:
         print(e)
@@ -3353,6 +3436,10 @@ def visualize_mesh(meshes, colors=None, names=None, bg="meshlab",
     win.show_settings = True
 
     for i, (mesh, color) in enumerate(zip(meshes, colors)):
+        # Normales suaves: imprescindible para que defaultLit ilumine correctamente
+        mesh.compute_vertex_normals()
+        # Eliminar vertex colors para que el material PBR tome control del color
+        mesh.vertex_colors = o3d.utility.Vector3dVector([])
         mat = _pbr_make_material(color)
         win.add_geometry(names[i], mesh, mat)
 
@@ -3367,10 +3454,15 @@ def visualize_mesh(meshes, colors=None, names=None, bg="meshlab",
     bg_rgba = np.array(_PBR_BACKGROUNDS.get(bg, _PBR_BACKGROUNDS["meshlab"]), dtype=np.float32)
     win.set_background(bg_rgba, None)
 
+    # Skybox y ambiente (replica el look "Standard + Soft shadows" de la referencia)
+    win.show_skybox(True)
+    win.scene.scene.enable_indirect_light(True)
+    win.scene.scene.set_indirect_light_intensity(35000)
+
     win.scene.scene.set_sun_light(
-        direction=[0.5, -1.0, -0.8],
-        color=[1.0, 0.98, 0.92],
-        intensity=55000
+        direction=[0.45, -0.9, -0.6],
+        color=[1.0, 0.97, 0.88],
+        intensity=65000
     )
     win.scene.scene.enable_sun_light(True)
 
