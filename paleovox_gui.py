@@ -271,7 +271,7 @@ class PaleoVoxGUI(QMainWindow):
         pl_layout.addWidget(self._build_pipeline_group())
         pl_layout.addWidget(self._build_augment_group())
         pl_layout.addStretch()
-        tabs.addTab(tab_pipeline, "Pipeline & Augmentation")
+        tabs.addTab(tab_pipeline, "Pipeline - Augmentation")
 
         tab_recon = QWidget()
         rc_layout = QVBoxLayout(tab_recon)
@@ -279,14 +279,14 @@ class PaleoVoxGUI(QMainWindow):
         rc_layout.addWidget(self._build_reconstruction_group())
         rc_layout.addWidget(self._build_voxel_comparison_group())
         rc_layout.addStretch()
-        tabs.addTab(tab_recon, "Reconstruction & Comparison")
+        tabs.addTab(tab_recon, "Reconstruction - Comparison")
 
         tab_view = QWidget()
         vs_layout = QVBoxLayout(tab_view)
         vs_layout.setContentsMargins(8, 8, 8, 8)
         vs_layout.addWidget(self._build_view_save_group())
         vs_layout.addStretch()
-        tabs.addTab(tab_view, "View & Save")
+        tabs.addTab(tab_view, "View - Save")
 
         tab_tsne = QWidget()
         ts_layout = QVBoxLayout(tab_tsne)
