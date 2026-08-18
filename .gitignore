@@ -9,3 +9,6 @@ portable_versions/*/PaleoVox.bin
 # Unknown artifacts
 idk_whyishere/
 new_codes/
+
+# QA bug reports and local test harness
+bugs/
