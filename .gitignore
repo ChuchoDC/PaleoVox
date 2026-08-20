@@ -12,3 +12,6 @@ new_codes/
 
 # QA bug reports and local test harness
 bugs/
+
+# Large test samples exceeding GitHub's 100 MB limit
+test_data/skull_512.npy

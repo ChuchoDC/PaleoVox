@@ -1323,9 +1323,19 @@ class PaleoVoxGUI(QMainWindow):
         except Exception as e:
             self._show_error("Voxel Comparison Error", f"Failed to compare voxels:\n{e}")
 
+    def _safe_unlink(self, path):
+        if not path:
+            return
+        try:
+            if os.path.exists(path):
+                os.unlink(path)
+        except OSError:
+            pass
+
     def _on_generate_tsne(self):
         if self.original_voxel is None or self.voxel is None:
             return
+        tmp_path = None
         try:
             pp = self.spin_tsne_pp.value()
             seed = self.spin_tsne_seed.value()
@@ -1375,12 +1385,13 @@ class PaleoVoxGUI(QMainWindow):
             btn_row.addWidget(btn_close)
             layout.addLayout(btn_row)
 
-            dialog.finished.connect(lambda: os.unlink(tmp_path))
             dialog.exec_()
 
             self._status("t-SNE comparison complete")
         except Exception as e:
             self._show_error("t-SNE Error", f"Failed to generate t-SNE:\n{e}")
+        finally:
+            self._safe_unlink(tmp_path)
 
     def _on_save_tsne_image(self, source_path):
         default_name = ""
@@ -1403,6 +1414,7 @@ class PaleoVoxGUI(QMainWindow):
     def _on_generate_2d_single(self):
         if self.voxel is None:
             return
+        tmp_path = None
         try:
             axis_str = self.combo_2d_axis.currentText()
             axis_map = {"XY": ["x", "y"], "XZ": ["x", "z"], "YZ": ["y", "z"]}
@@ -1445,12 +1457,13 @@ class PaleoVoxGUI(QMainWindow):
             btn_row.addWidget(btn_close)
             layout.addLayout(btn_row)
 
-            dialog.finished.connect(lambda: os.unlink(tmp_path))
             dialog.exec_()
 
             self._status(f"2D perspective ({axis_str}) complete")
         except Exception as e:
             self._show_error("2D Perspective Error", f"Failed to generate 2D perspective:\n{e}")
+        finally:
+            self._safe_unlink(tmp_path)
 
     def _on_generate_2d_comparison(self):
         use_external = self.chk_use_external.isChecked()
@@ -1470,6 +1483,7 @@ class PaleoVoxGUI(QMainWindow):
             vox_b = self.voxel
             label_a = "Original"
             label_b = "Current"
+        tmp_path = None
         try:
             axis_str = self.combo_2d_axis.currentText()
             axis_map = {"XY": ["x", "y"], "XZ": ["x", "z"], "YZ": ["y", "z"]}
@@ -1520,12 +1534,13 @@ class PaleoVoxGUI(QMainWindow):
             btn_row.addWidget(btn_close)
             layout.addLayout(btn_row)
 
-            dialog.finished.connect(lambda: os.unlink(tmp_path))
             dialog.exec_()
 
             self._status(f"2D comparison ({axis_str}) complete")
         except Exception as e:
             self._show_error("2D Comparison Error", f"Failed to generate 2D comparison:\n{e}")
+        finally:
+            self._safe_unlink(tmp_path)
 
     def _on_load_external_voxel1(self, path):
         try:
