@@ -1163,13 +1163,12 @@ class PaleoVoxGUI(QMainWindow):
                 self._status(f"Converting {occupied:,} voxels to mesh (marching cubes)...")
                 vox = self.voxel
                 color_name = self.combo_color.currentText().lower()
-                from PyQt5.QtCore import QTimer
                 def _run():
                     mesh = pv.voxel_to_mesh_mc(vox)
-                    QTimer.singleShot(0, lambda: pv.visualize_mesh(
+                    pv.visualize_mesh(
                         [mesh], colors=[color_name],
                         title="PaleoVox — Voxel View (Marching Cubes)"
-                    ))
+                    )
                 threading.Thread(target=_run, daemon=True).start()
             else:
                 occupied = np.argwhere(self.voxel > 0)
@@ -1281,10 +1280,9 @@ class PaleoVoxGUI(QMainWindow):
                             title += " vs "
                         title += "Current (Red)"
                     if meshes:
-                        from PyQt5.QtCore import QTimer
-                        QTimer.singleShot(0, lambda: pv.visualize_mesh(
+                        pv.visualize_mesh(
                             meshes, colors=colors, names=names, title=title
-                        ))
+                        )
 
                 threading.Thread(target=_run, daemon=True).start()
             else:
