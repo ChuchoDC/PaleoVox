@@ -956,9 +956,12 @@ class PaleoVoxGUI(QMainWindow):
                 self._status(f"Loaded {fname} — {self.voxel.shape} grid, {occupied:,} occupied voxels")
                 return
 
-            self.mesh, min_bound, max_bound, dimensions = pv.load_mesh(
+            mesh, min_bound, max_bound, dimensions = pv.load_mesh(
                 path, return_bounds=True
             )
+            if len(mesh.vertices) == 0 or len(mesh.triangles) == 0:
+                raise ValueError(f"{fname} does not contain a valid mesh (0 vertices/faces)")
+            self.mesh = mesh
             self.original_mesh = o3d.geometry.TriangleMesh(self.mesh)
             self.reconstructed_mesh = None
             self.bounds = (min_bound, max_bound, dimensions)

@@ -1679,6 +1679,11 @@ def erotion_general(voxel, axis_idx=0, increment_min=0.5, pr=False):
     coefficient = max_val / min_val
     restriction = int(min_val * coefficient * increment_min)
 
+    # Clamp so the random interval is never empty (e.g. increment_min == 1.0
+    # makes restriction equal max_val, which would raise low >= high).
+    if restriction >= max_val:
+        restriction = max_val - 1
+
     # Generate random cut point
     cut_point = np.random.randint(
         restriction,
