@@ -305,6 +305,7 @@ PaleoVox/
 ├── paleovoxpy.py          # Backend library: 25 public functions (3,401 lines)
 ├── paleovox_gui.py        # PyQt5 desktop application (1,659 lines)
 ├── paleovox_viewer.py     # Standalone PBR mesh viewer, run as subprocess (165 lines)
+├── requirements.txt       # Pinned runtime dependencies (pip install -r requirements.txt)
 ├── logo/
 │   └── logo.png           # PaleoVox mark (window icon + GUI panel logo)
 ├── branding/
@@ -349,14 +350,14 @@ The code uses f-strings and type hints.
 | `plotly` | `plotly.graph_objects` | `plot_voxels`, `plot_meshes` only | Lazy import; not needed by GUI workflow |
 | `PyQt5` | `PyQt5.QtWidgets/QtCore/QtGui` | GUI only | Desktop application |
 
-**Install (reference command):**
+**Install:**
 
 ```bash
-pip install open3d numpy scipy matplotlib seaborn scikit-learn scikit-image pymeshfix PyQt5 plotly
+pip install -r requirements.txt
 ```
 
-> A `requirements.txt` is not present in the current tree (pending regeneration — see
-> [section 4.9](#49-known-issues--technical-debt)).
+`requirements.txt` pins the versions used for development and testing (from the `paleovox`
+conda environment, Python 3.9).
 
 **Platform notes**
 
@@ -954,7 +955,7 @@ Severity: **High** = blocks a default workflow; **Medium** = misleading or fragi
 | K-12 | Low | Directly loaded `.npy` voxels carry no scale metadata, so reconstructed meshes from them are in voxel units | `paleovox_gui.py:939-957,1192-1207`. Consider embedding scale info in the `.npy` (e.g. sidecar or `np.savez`) |
 | K-13 | ~~Low~~ Resolved | `erotion_general` raised `ValueError` for `increment_min=1.0` (`restriction >= max_val`) | Fixed 2026-10-11: `restriction` clamped to `max_val - 1` before `np.random.randint` (`paleovoxpy.py:1680-1686`; QA AU-015) |
 | K-14 | Low | `QPalette`, `QColor` imported but unused in the GUI; augmentation handlers skip `_update_button_states` (harmless today) | `paleovox_gui.py:25`; handlers 1046-1125. Cleanup |
-| K-15 | Low | Repository docs and packaging are being regenerated: `README.md`, `requirements.txt`, `docs/*.tex`, `portable_versions/` are deleted in the working tree (present in git history, pending rewrite for this version) | Working tree status. Track with the doc regeneration work |
+| K-15 | Low | Repository docs and packaging are being regenerated: `README.md`, `docs/*.tex`, `portable_versions/` are deleted in the working tree (present in git history, pending rewrite for this version) | Working tree status. Track with the doc regeneration work |
 
 ### 4.10 Testing & QA
 
@@ -1020,7 +1021,7 @@ documents are being regenerated.
 **Versioning and release**
 
 1. Keep a single version string (resolve K-09), update [section 1](#1-executive-summary) metadata.
-2. Regenerate README/requirements/packaging (K-15) in the same change as any version bump.
+2. Regenerate README/packaging (K-15) in the same change as any version bump.
 
 ---
 
@@ -1037,7 +1038,7 @@ documents are being regenerated.
 
 **Near term (packaging & docs)**
 
-- Regenerate `README.md`, `requirements.txt`, and the LaTeX documentation set (K-15).
+- Regenerate `README.md` and the LaTeX documentation set (K-15).
 - Publish this SSOT as the canonical entry point for all future docs.
 - Add a LICENSE file and resolve the MIT/open-source status.
 
