@@ -1,0 +1,15 @@
+# PaleoVox runtime dependencies
+# Pinned to the versions used for development and testing (conda env "paleovox", Python 3.9).
+# Usage: after creating and activating your conda environment, run:
+#     pip install -r requirements.txt
+
+numpy==2.0.2
+open3d==0.19.0
+scipy==1.13.1
+matplotlib==3.9.4
+seaborn==0.13.2
+scikit-learn==1.6.1
+scikit-image==0.24.0
+pymeshfix==0.17.2
+PyQt5==5.15.11
+plotly==6.9.0
