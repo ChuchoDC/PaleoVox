@@ -145,6 +145,7 @@ Launch with `python3 paleovox_gui.py`. The window has a **left panel** and **fiv
 
 - Pick a display color; open the mesh viewer or voxel viewer; save the current mesh or voxels.
 - A **Marching Cubes** checkbox switches voxel viewing between blocks and smooth surfaces.
+- A **Show Axes** checkbox (on by default) draws labeled X/Y/Z axes in the block voxel viewer; Voxel Comparison has its own.
 
 **Tab 4 — t-SNE Analysis**
 
@@ -726,7 +727,7 @@ os/sys/subprocess/json/tempfile.
 | `_on_generate_2d_single` | 1412 | `pv.plot_2d_perspective` → temp PNG → dialog |
 | `_on_generate_2d_comparison` | 1466 | `pv.plot_2d_perspective_2samples` → temp PNG → dialog |
 | `on_view_mesh` | 1145 | Prefers `reconstructed_mesh`, else `mesh`; subprocess PBR viewer |
-| `on_view_voxels` | 1156 | MC mesh subprocess viewer, or blocky `VoxelGrid` via `draw_geometries` |
+| `on_view_voxels` | 1159 | MC mesh subprocess viewer, or blocky `VoxelGrid` + optional labeled XYZ frame (`_axes_geometries`) via `draw_geometries` |
 | `on_save_mesh` / `on_save_voxel` | 1612 / 1629 | File dialogs + `pv.save_mesh` / `pv.save_voxel` |
 | `_on_save_deformed_voxels` | 1127 | Saves current voxels with `_deformed.npy` default name |
 | `_on_save_reconstructed` | 1595 | Saves reconstructed mesh |
@@ -859,7 +860,7 @@ voxel_B.npy ─┘
 | Need | Path |
 |---|---|
 | Mesh, PBR shaded | `pv.visualize_mesh` → subprocess `paleovox_viewer.py` |
-| Voxels as blocks | GUI thread → `VoxelGrid.create_from_point_cloud` → `draw_geometries` |
+| Voxels as blocks | GUI thread → `VoxelGrid.create_from_point_cloud` + optional `_axes_geometries` (labeled X red, Y green, Z blue at index origin) → `draw_geometries` |
 | Voxels as smooth surface | `pv.voxel_to_mesh_mc` → `pv.visualize_mesh` |
 | 2D projection | `pv.plot_2d_perspective(_2samples)(save_path=tmp.png)` → Qt dialog |
 | Shape analysis | `pv.tsne_compare(save_path=tmp.png)` → Qt dialog |
@@ -1113,9 +1114,11 @@ defaults for manual QA (historical WD-001…WD-006 checks).
 | `chk_frac_both` | unchecked | — |
 | `combo_color` | Blue (index 0) | Blue, Red, Green, Orange, Purple, Cyan, Yellow, White, Gray |
 | `chk_voxel_mc` | unchecked | — |
+| `chk_voxel_axes` | checked | — |
 | `combo_compare_vis` | Both (index 0) | Both, Original Only, Reconstructed Only |
 | `combo_voxel_vis` | Both (index 0) | Both, Original Only, Current Only |
 | `chk_voxel_comp_mc` | unchecked | — |
+| `chk_voxel_comp_axes` | checked | — |
 | `spin_tsne_pp` | 100 | 5–500 |
 | `spin_tsne_seed` | 42 | 0–9999 |
 | `spin_tsne_pct` | 0.50 | 0.01–1.00, step 0.05 |
