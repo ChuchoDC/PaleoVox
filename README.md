@@ -60,6 +60,8 @@ python paleovox_gui.py
 2. Click **Mesh → Voxels** to voxelize the loaded mesh.
 3. Apply any augmentations: **Deformation**, **Erosion**, **Rotation**, **Fracture**.
 4. Click **Voxels → Mesh** to rebuild a mesh, or **Save Deformed Voxels** to export `.npy`.
+5. Click **View Voxels** to inspect the grid; labeled X/Y/Z axes (red/green/blue) are shown
+   by default and can be hidden with the **Show Axes** checkbox.
 
 ### As a Python library
 

@@ -27,6 +27,35 @@ from PyQt5.QtGui import QFont, QPalette, QColor, QIcon, QPixmap
 
 AXIS_MAP = {"X": 0, "Y": 1, "Z": 2}
 
+# Letter strokes in a unit square; draw_geometries cannot render text.
+_AXIS_LETTERS = {
+    "X": [((0, 0), (1, 1)), ((0, 1), (1, 0))],
+    "Y": [((0, 1), (.5, .5)), ((1, 1), (.5, .5)), ((.5, .5), (.5, 0))],
+    "Z": [((0, 1), (1, 1)), ((1, 1), (0, 0)), ((0, 0), (1, 0))],
+}
+
+
+def _axes_geometries(size):
+    """XYZ frame (red/green/blue) at the grid index origin plus line-drawn labels."""
+    frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=size)
+    h = size * 0.12
+    pts, lines, colors = [], [], []
+    for i, (name, rgb) in enumerate(zip("XYZ", [(1, 0, 0), (0, 1, 0), (0, 0, 1)])):
+        tip = np.zeros(3)
+        tip[i] = size * 1.1
+        # Letters lie in the XY plane so they read upright from the default camera.
+        for a, b in _AXIS_LETTERS[name]:
+            for u, v in (a, b):
+                pts.append(tip + [u * h, v * h, 0])
+            lines.append([len(pts) - 2, len(pts) - 1])
+            colors.append(rgb)
+    labels = o3d.geometry.LineSet(
+        o3d.utility.Vector3dVector(np.array(pts, dtype=np.float64)),
+        o3d.utility.Vector2iVector(np.array(lines, dtype=np.int32)),
+    )
+    labels.colors = o3d.utility.Vector3dVector(np.array(colors, dtype=np.float64))
+    return [frame, labels]
+
 
 class DropZone(QLabel):
     file_dropped = pyqtSignal(str)
@@ -475,6 +504,10 @@ class PaleoVoxGUI(QMainWindow):
         self.chk_voxel_mc = QCheckBox("Marching Cubes (Voxel → Mesh)")
         self.chk_voxel_mc.setToolTip("When checked, voxels are converted to a mesh using marching cubes and displayed with PBR shading")
         mc_row.addWidget(self.chk_voxel_mc)
+        self.chk_voxel_axes = QCheckBox("Show Axes")
+        self.chk_voxel_axes.setChecked(True)
+        self.chk_voxel_axes.setToolTip("Show labeled X/Y/Z axes in the voxel block viewer")
+        mc_row.addWidget(self.chk_voxel_axes)
         mc_row.addStretch()
         vsl.addLayout(mc_row)
 
@@ -552,6 +585,10 @@ class PaleoVoxGUI(QMainWindow):
         self.chk_voxel_comp_mc = QCheckBox("Marching Cubes (Voxel → Mesh)")
         self.chk_voxel_comp_mc.setToolTip("When checked, voxels are converted to meshes using marching cubes and displayed with PBR shading")
         mc_comp_row.addWidget(self.chk_voxel_comp_mc)
+        self.chk_voxel_comp_axes = QCheckBox("Show Axes")
+        self.chk_voxel_comp_axes.setChecked(True)
+        self.chk_voxel_comp_axes.setToolTip("Show labeled X/Y/Z axes in the voxel block viewer")
+        mc_comp_row.addWidget(self.chk_voxel_comp_axes)
         mc_comp_row.addStretch()
         vl.addLayout(mc_comp_row)
 
@@ -905,9 +942,11 @@ class PaleoVoxGUI(QMainWindow):
         self.chk_frac_both.setChecked(False)
         self.combo_color.setCurrentIndex(0)
         self.chk_voxel_mc.setChecked(False)
+        self.chk_voxel_axes.setChecked(True)
         self.combo_compare_vis.setCurrentIndex(0)
         self.combo_voxel_vis.setCurrentIndex(0)
         self.chk_voxel_comp_mc.setChecked(False)
+        self.chk_voxel_comp_axes.setChecked(True)
         self.spin_tsne_pp.setValue(100)
         self.spin_tsne_seed.setValue(42)
         self.spin_tsne_pct.setValue(0.5)
@@ -1184,9 +1223,12 @@ class PaleoVoxGUI(QMainWindow):
                 voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(
                     pcd, voxel_size=1.0
                 )
+                geoms = [voxel_grid]
+                if self.chk_voxel_axes.isChecked():
+                    geoms += _axes_geometries(max(self.voxel.shape) * 0.5)
                 threading.Thread(
                     target=lambda: o3d.visualization.draw_geometries(
-                        [voxel_grid], window_name="PaleoVox — Voxel View",
+                        geoms, window_name="PaleoVox — Voxel View",
                         width=1024, height=768
                     ),
                     daemon=True
@@ -1313,6 +1355,10 @@ class PaleoVoxGUI(QMainWindow):
                         title += "Current (Red)"
                 if not geoms:
                     return
+                if self.chk_voxel_comp_axes.isChecked():
+                    geoms += _axes_geometries(
+                        max(self.voxel.shape + self.original_voxel.shape) * 0.5
+                    )
                 self._status(f"Displaying voxel comparison: {vis_mode}")
                 threading.Thread(
                     target=lambda: o3d.visualization.draw_geometries(
