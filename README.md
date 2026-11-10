@@ -45,6 +45,8 @@ PaleoVox/
 ├── docs/
 │   ├── SSOT.md            # Single source of truth — full technical documentation
 │   └── QA/                # Unified QA test document (.tex / .pdf)
+├── presentation/          # XIX Congreso Nacional de Paleontología talk (slides, script, renders)
+├── marketing/             # 8-day bilingual Instagram campaign (posts, stories, calendar)
 └── test_data/             # Sample meshes and voxel grids for demos/testing
 ```
 
