@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>PaleoVox — Instagram stories</title>
+<link rel="stylesheet" href="campaign.css">
+<style>
+  /* Sticker zones are left empty on purpose: the sticker is added in the Instagram app (see calendar.md). */
+  .sticker-zone { height: 220px; }
+  .story .foot { margin-top: auto; }
+  .story .safe-bot { background: var(--card); position: relative; }
+  .story.blue .safe-bot { background: var(--blue); }
+  .story .foot .stripe { display: none; }
+  .story .safe-bot .stripe { display: block; }
+  .safe-top { background: linear-gradient(180deg, var(--grey), transparent); }
+  .story.blue .safe-top { background: none; }
+  .ab { position: absolute; right: 16px; top: 14px; background: var(--blue); color: #fff; font-family: 'Montserrat', sans-serif;
+        font-weight: 800; font-size: 48px; width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; }
+</style>
+</head>
+<body>
+
+<!-- Day 1 · Poll -->
+<section class="card story" id="d1_story">
+  <div class="safe-top"></div>
+  <div class="head" style="padding-top:0"><div class="badge">1</div><div class="kicker">Encuesta <span class="en">· Poll</span></div><div class="rule"></div></div>
+  <div class="titles"><h1>¿Has trabajado con <span class="hl">fósiles incompletos?</span></h1><h2>Ever worked with incomplete fossils?</h2></div>
+  <div class="gap-m"></div>
+  <div class="panels" style="height:500px"><div class="panel"><img src="../presentation/assets/figures/fig_3d_original.png"></div></div>
+  <div class="gap-m"></div>
+  <div class="sticker-zone"></div>
+  <footer class="foot"></footer>
+  <div class="safe-bot"><div class="stripe"></div></div>
+</section>
+
+<!-- Day 2 · Quiz -->
+<section class="card story" id="d2_story">
+  <div class="safe-top"></div>
+  <div class="head" style="padding-top:0"><div class="badge">2</div><div class="kicker">Quiz</div><div class="rule"></div></div>
+  <div class="titles"><h1>Hoy: compactación.<br><span class="hl">¿Qué daño sigue?</span></h1><h2>Today: compaction. Guess the next damage!</h2></div>
+  <div class="gap-m"></div>
+  <div class="panels" style="height:500px"><div class="panel"><img src="../presentation/assets/figures/damage/deformacion_mesh.png"><div class="tag" style="background:rgba(232,68,42,.92)">Compactación <i>· Compaction</i></div></div></div>
+  <div class="gap-m"></div>
+  <div class="sticker-zone"></div>
+  <footer class="foot"></footer>
+  <div class="safe-bot"><div class="stripe"></div></div>
+</section>
+
+<!-- Day 3 · Before / after -->
+<section class="card story" id="d3_story">
+  <div class="safe-top"></div>
+  <div class="head" style="padding-top:0"><div class="badge">3</div><div class="kicker">Antes y después <span class="en">· Before &amp; after</span></div><div class="rule"></div></div>
+  <div class="titles"><h1>Erosión: <span class="dmg">un extremo desaparece</span></h1><h2>Erosion: one end is gone</h2></div>
+  <div class="gap-m"></div>
+  <div class="panels" style="height:500px">
+    <div class="panel"><img src="../presentation/assets/figures/damage/original_voxel.png"><div class="tag">Antes <i>· Before</i></div></div>
+    <div class="panel"><img src="../presentation/assets/figures/damage/erosion_voxel.png"><div class="tag" style="background:rgba(232,68,42,.92)">Después <i>· After</i></div></div>
+  </div>
+  <div class="gap-m"></div>
+  <div class="sticker-zone"></div>
+  <footer class="foot"></footer>
+  <div class="safe-bot"><div class="stripe"></div></div>
+</section>
+
+<!-- Day 4 · Emoji slider -->
+<section class="card story" id="d4_story">
+  <div class="safe-top"></div>
+  <div class="head" style="padding-top:0"><div class="badge">4</div><div class="kicker">Rotación <span class="en">· Rotation</span></div><div class="rule"></div></div>
+  <div class="titles"><h1>¿Lo reconocerías <span class="hl">en cualquier posición?</span></h1><h2>Would you recognize it in any position?</h2></div>
+  <div class="gap-m"></div>
+  <div class="panels" style="height:500px"><div class="panel"><img src="../presentation/assets/figures/damage/rotacion_mesh.png"></div></div>
+  <div class="gap-m"></div>
+  <div class="sticker-zone"></div>
+  <footer class="foot"></footer>
+  <div class="safe-bot"><div class="stripe"></div></div>
+</section>
+
+<!-- Day 5 · A/B quiz -->
+<section class="card story" id="d5_story">
+  <div class="safe-top"></div>
+  <div class="head" style="padding-top:0"><div class="badge">5</div><div class="kicker">Fractura <span class="en">· Fracture</span></div><div class="rule"></div></div>
+  <div class="titles"><h1>¿Cuál es <span class="hl">el original?</span></h1><h2>Which one is the original?</h2></div>
+  <div class="gap-m"></div>
+  <div class="panels" style="height:500px">
+    <div class="panel"><img src="../presentation/assets/figures/fig_3d_original.png"><div class="ab">A</div></div>
+    <div class="panel"><img src="../presentation/assets/figures/damage/fractura_mesh.png"><div class="ab">B</div></div>
+  </div>
+  <div class="gap-m"></div>
+  <div class="sticker-zone"></div>
+  <footer class="foot"></footer>
+  <div class="safe-bot"><div class="stripe"></div></div>
+</section>
+
+<!-- Day 6 · A fossil with a story -->
+<section class="card story" id="d6_story">
+  <div class="safe-top"></div>
+  <div class="head" style="padding-top:0"><div class="badge">6</div><div class="kicker">PaleoVox GUI</div><div class="rule"></div></div>
+  <div class="titles"><h1>Un fósil <span class="hl">con historia</span></h1><h2>A fossil with a story</h2></div>
+  <div class="gap-m"></div>
+  <div class="panels" style="height:500px">
+    <div class="panel"><img src="../presentation/assets/figures/damage/original_voxel.png"><div class="tag">Original</div></div>
+    <div class="panel"><img src="../presentation/assets/figures/damage/combinado_voxel.png"><div class="tag" style="background:rgba(232,68,42,.92)">3 daños <i>· 3 damages</i></div></div>
+    <div class="panel"><img src="../presentation/assets/figures/damage/combinado_mesh.png"><div class="tag">Malla <i>· Mesh</i></div></div>
+  </div>
+  <div class="gap-m"></div>
+  <div class="body"><p class="lead">Compactación → erosión → fractura, paso a paso y sin código.</p><p class="lead en">Compaction → erosion → fracture, step by step, no code.</p></div>
+  <div class="gap-m"></div>
+  <div class="sticker-zone" style="height:120px"></div>
+  <footer class="foot"></footer>
+  <div class="safe-bot"><div class="stripe"></div></div>
+</section>
+
+<!-- Day 7 · Question box -->
+<section class="card story" id="d7_story">
+  <div class="safe-top"></div>
+  <div class="head" style="padding-top:0"><div class="badge">7</div><div class="kicker">Pregúntanos <span class="en">· Ask us</span></div><div class="rule"></div></div>
+  <div class="titles"><h1>¿Dudas sobre <span class="hl">PaleoVox?</span></h1><h2>Questions about PaleoVox? Ask us anything.</h2></div>
+  <div class="gap-m"></div>
+  <div class="panels" style="height:500px"><div class="panel contain" style="padding:12px"><img src="../presentation/assets/figures/fig_tsne.png"><div class="tag">t-SNE</div></div></div>
+  <div class="gap-m"></div>
+  <div class="sticker-zone"></div>
+  <footer class="foot"></footer>
+  <div class="safe-bot"><div class="stripe"></div></div>
+</section>
+
+<!-- Day 8 · Award -->
+<section class="card story blue" id="d8_story">
+  <div class="safe-top"></div>
+  <div class="head" style="padding-top:0"><div class="badge">8</div><div class="kicker">¡Gracias! <span class="en">· Thank you!</span></div><div class="rule"></div></div>
+  <div class="titles"><h1>PaleoVox ganó<br><span class="gold">Mejor presentación</span></h1><h2>PaleoVox won Best Presentation</h2></div>
+  <div class="gap-m"></div>
+  <div class="body"><p class="lead">Impartida por <b>Alan Amaro</b> · XIX Congreso Nacional de Paleontología, La Paz, B.C.S.</p><p class="lead en">Presented by Alan Amaro · Mexico's 19th National Paleontology Congress.</p></div>
+  <div class="gap-m"></div>
+  <div class="panels" style="height:250px"><div class="panel contain" style="padding:26px 40px"><img src="../presentation/assets/logos/congreso-xix-logo.png"></div></div>
+  <div class="gap-m"></div>
+  <div class="sticker-zone" style="height:150px"></div>
+  <footer class="foot"></footer>
+  <div class="safe-bot"><div class="stripe"></div></div>
+</section>
+
+<script>
+  const FOOT = `
+    <img src="../presentation/assets/logos/unam-azul.png" alt="UNAM">
+    <img src="../presentation/assets/logos/geologia-color.png" alt="Instituto de Geología">
+    <div class="who"><b>UNAM</b><br>Facultad de Ciencias · Instituto de Geología</div>
+    <div class="pv">Paleo<span>Vox</span></div>
+    <div class="stripe"></div>`;
+  document.querySelectorAll('.foot').forEach((f) => (f.innerHTML = FOOT));
+</script>
+</body>
+</html>

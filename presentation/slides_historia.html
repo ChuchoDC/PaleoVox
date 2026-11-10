@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>PaleoVox GUI — La historia · XIX Congreso Nacional de Paleontología</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+
+  :root {
+    --color-primary: #003D64;
+    --color-primary-2: #1F6FA8;
+    --color-secondary: #0897D5;
+    --color-accent: #E8442A;
+    --color-greengrey: #7F9297;
+    --color-card: #F7FAFB;
+    --color-muted: #EAEDEF;
+    --color-border: #D6DEE3;
+    --color-foreground: #16262F;
+    --color-ink-soft: #3E5560;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #ffffff; }
+
+  body {
+    width: 1280px;
+    font-family: 'Open Sans', 'PVSymbols', Arial, sans-serif;
+    color: var(--color-foreground);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .slide {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    background: #fff;
+    padding: 30px 52px 46px 52px;
+    display: flex;
+    flex-direction: column;
+    page-break-after: always;
+  }
+  .slide:last-child { page-break-after: auto; }
+
+  .s-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; flex: 0 0 auto; }
+  .s-num {
+    flex: 0 0 auto; width: 40px; height: 40px; border-radius: 10px;
+    background: var(--color-primary); color: #fff;
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 800; font-size: 28px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .s-titles { flex: 1 1 auto; min-width: 0; }
+  .act {
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 800; font-size: 12.5px; letter-spacing: 0.24em;
+    color: var(--color-secondary); text-transform: uppercase; margin-bottom: 3px;
+  }
+  .s-titles h2 {
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 700; font-size: 29px; letter-spacing: -0.01em;
+    color: var(--color-primary); line-height: 1.12;
+  }
+  .s-rule { flex: 0 0 auto; width: 120px; height: 4px; border-radius: 2px; margin-top: 19px;
+    background: linear-gradient(90deg, var(--color-secondary), var(--color-muted)); }
+
+  .s-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+
+  .s-foot {
+    position: absolute; left: 52px; right: 52px; bottom: 15px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 14px; letter-spacing: 0.03em; color: var(--color-greengrey);
+  }
+  .s-foot b { color: var(--color-primary); font-weight: 600; }
+  .accent-strip { position: absolute; left: 0; right: 0; bottom: 0; height: 5px;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 55%, var(--color-accent) 100%); }
+
+  .card { background: var(--color-card); border: 1.5px solid var(--color-border); border-radius: 14px; padding: 14px 18px; }
+  .card.plain { background: #fff; }
+  .card.accent-l { border-left: 5px solid var(--color-accent); }
+  .card.blue-l { border-left: 5px solid var(--color-secondary); }
+
+  p.body { font-size: 18.5px; line-height: 1.5; color: var(--color-foreground); }
+  p.lead { font-size: 21px; line-height: 1.5; }
+  strong { color: var(--color-primary); }
+  .hl-red { color: var(--color-accent); font-weight: 700; }
+  .hl-blue { color: var(--color-secondary); font-weight: 700; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 600; font-size: 15px; color: var(--color-primary);
+    background: var(--color-muted); border-radius: 999px; padding: 4px 13px;
+  }
+  .chip.accent { background: #FFEDE9; color: var(--color-accent); }
+  .chip.blue { background: #E4F3FC; color: #0A6FA8; }
+
+  .cap { font-size: 14px; line-height: 1.4; color: var(--color-ink-soft); }
+  .cap b { color: var(--color-primary); }
+
+  .shot { position: relative; border: 1.5px solid var(--color-border); border-radius: 12px; overflow: hidden; background: #fff; }
+  .shot img { display: block; width: 100%; }
+
+  .badge {
+    position: absolute; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--color-accent); color: #fff; border: 2px solid #fff;
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 800; font-size: 14.5px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .badge.blue { background: var(--color-secondary); }
+
+  .grid { display: grid; gap: 13px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: 1fr 1fr 1fr; }
+  .g4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .tile { background: #fff; border: 1.5px solid var(--color-border); border-radius: 14px; padding: 14px 16px; }
+  .tile .t-head { display: flex; align-items: center; gap: 12px; margin-bottom: 7px; }
+  .tile svg { flex: 0 0 auto; }
+  .tile h3 {
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-size: 18.5px; font-weight: 700; color: var(--color-primary); line-height: 1.15;
+  }
+  .tile p { font-size: 15.5px; line-height: 1.42; color: var(--color-ink-soft); }
+
+  .metric { background: var(--color-card); border: 1.5px solid var(--color-border); border-radius: 14px;
+    padding: 12px 15px; display: flex; align-items: center; gap: 12px; }
+  .metric .m-num {
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 800; font-size: 30px; color: var(--color-primary); line-height: 1; white-space: nowrap;
+  }
+  .metric .m-num small { font-size: 17px; font-weight: 700; }
+  .metric .m-txt { font-size: 15px; line-height: 1.32; color: var(--color-ink-soft); }
+
+  .chain { display: flex; align-items: stretch; gap: 0; }
+  .chain .step { flex: 1 1 0; background: #fff; border: 1.5px solid var(--color-border); border-radius: 12px;
+    padding: 9px 7px; text-align: center; }
+  .chain .step b { display: block; font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-size: 15px; font-weight: 700; color: var(--color-primary); line-height: 1.2; }
+  .chain .step span { font-size: 13.5px; color: var(--color-greengrey); line-height: 1.25; display: block; margin-top: 3px; }
+  .chain .arrow { flex: 0 0 20px; display: flex; align-items: center; justify-content: center;
+    color: var(--color-secondary); font-weight: 800; font-size: 17.5px; }
+
+  ul.checks { list-style: none; }
+  ul.checks li { position: relative; padding-left: 28px; font-size: 17px; line-height: 1.42; margin-bottom: 9px; }
+  ul.checks li:last-child { margin-bottom: 0; }
+  ul.checks li::before {
+    content: ""; position: absolute; left: 0; top: 3px; width: 17px; height: 17px;
+    border-radius: 5px; background: var(--color-secondary);
+  }
+  ul.checks li::after {
+    content: ""; position: absolute; left: 5px; top: 9px; width: 7px; height: 4px;
+    border-left: 3px solid #fff; border-bottom: 3px solid #fff; transform: rotate(-45deg);
+  }
+  ul.checks.warn li::before { background: var(--color-accent); }
+
+  .figframe { position: relative; background: #fff; border: 1.5px solid var(--color-border);
+    border-radius: 12px; overflow: hidden; }
+  .figframe img { display: block; width: 100%; }
+  .flabel {
+    position: absolute; top: 9px; left: 9px; z-index: 2;
+    background: var(--color-primary); color: #fff;
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 700; font-size: 12.5px; letter-spacing: 0.1em;
+    padding: 4px 10px; border-radius: 999px; text-transform: uppercase;
+  }
+  .flabel.red { background: var(--color-accent); }
+  .flabel.blue { background: var(--color-secondary); }
+
+  .panels { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; flex: 1 1 auto; min-height: 0; }
+  .panel { display: flex; flex-direction: column; background: #fff; border: 1.5px solid var(--color-border);
+    border-radius: 14px; overflow: hidden; min-height: 0; }
+  .panel .pimg { position: relative; flex: 1 1 auto; min-height: 0; }
+  .panel .pimg img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .panel .pcap { flex: 0 0 auto; padding: 8px 12px; font-size: 14px; line-height: 1.35; color: var(--color-ink-soft); border-top: 1.5px solid var(--color-border); }
+  .panel .pcap b { color: var(--color-primary); }
+
+  .storyline { display: flex; align-items: center; gap: 16px; }
+  .storyline .figframe { flex: 1 1 0; }
+  .storyline .mid { flex: 0 0 auto; text-align: center; padding: 0 4px; }
+  .storyline .mid .m-title { font-family: 'Montserrat'; font-weight: 800; font-size: 14px;
+    color: var(--color-primary); letter-spacing: 0.06em; }
+  .storyline .mid .m-arrow { font-size: 30px; color: var(--color-secondary); font-weight: 800; line-height: 1.1; }
+  .storyline .mid .m-sub { font-size: 14px; color: var(--color-ink-soft); line-height: 1.35; max-width: 150px; }
+
+  .codeblock { background: #0E2233; border-radius: 12px; padding: 13px 16px;
+    font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: 14px; line-height: 1.72; color: #BFE3F5; }
+  .codeblock .cm { color: #7F9297; }
+  .codeblock .fn { color: #7FD1F5; }
+  .codeblock .s { color: #F5B7A6; }
+
+  .damage-card { background: #fff; border: 1.5px solid var(--color-border); border-radius: 14px; overflow: hidden;
+    display: flex; flex-direction: column; }
+  .damage-card .thumb { position: relative; height: 190px; overflow: hidden; border-bottom: 1.5px solid var(--color-border); background: #FFFFFF; }
+  .damage-card .thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .damage-card .dc { padding: 10px 13px 12px 13px; }
+  .damage-card h3 { font-family: 'Montserrat','PVSymbols',Arial,sans-serif; font-size: 17px;
+    font-weight: 700; color: var(--color-primary); margin-bottom: 4px; }
+  .damage-card p { font-size: 14px; line-height: 1.38; color: var(--color-ink-soft); }
+
+  .s-title { padding: 0; }
+  .t-top { display: flex; justify-content: space-between; align-items: center; padding: 18px 52px 10px 52px; flex: 0 0 auto; }
+  .t-top img.congreso { height: 50px; display: block; }
+  .t-top .t-meta { text-align: right; font-size: 15px; color: var(--color-ink-soft); line-height: 1.5; }
+  .t-top .t-meta b { color: var(--color-primary); font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif; }
+  .t-main { flex: 1 1 auto; padding: 0 84px; display: flex; flex-direction: column; justify-content: center; }
+  .kicker { font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif; font-weight: 800; font-size: 15.5px;
+    letter-spacing: 0.3em; color: var(--color-secondary); text-transform: uppercase; margin-bottom: 11px; }
+  .t-main h1 {
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 800; font-size: 34px; line-height: 1.2; color: var(--color-primary);
+  }
+  .t-main h1 .hl { color: var(--color-secondary); }
+  .t-authors { margin-top: 15px; font-size: 17.5px; font-weight: 600; color: var(--color-foreground); line-height: 1.5; }
+  .t-authors sup { color: var(--color-accent); font-weight: 700; }
+  .t-aff { margin-top: 5px; font-size: 15px; color: var(--color-ink-soft); line-height: 1.5; }
+  .t-aff sup { color: var(--color-accent); font-weight: 700; }
+  .t-mail { margin-top: 4px; font-size: 14px; color: var(--color-greengrey); }
+  .t-keywords { padding: 0 84px; margin-bottom: 10px; }
+  .t-logos { flex: 0 0 auto; padding: 0 52px 52px 52px; display: flex; align-items: center; justify-content: center; gap: 30px; }
+  .t-logos img { display: block; }
+  .t-logos .lg-sep { width: 1.5px; height: 40px; background: var(--color-border); }
+
+  .legend { display: flex; flex-direction: column; gap: 9px; }
+  .legend .lg-item { display: flex; gap: 10px; align-items: flex-start; }
+  .legend .lg-item .badge { position: static; flex: 0 0 auto; }
+  .legend .lg-item p { font-size: 15px; line-height: 1.38; color: var(--color-ink-soft); }
+  .legend .lg-item p b { color: var(--color-primary); }
+
+  .kpi { display: flex; align-items: baseline; gap: 10px; }
+  .kpi .n { font-family: 'Montserrat'; font-weight: 800; font-size: 37px; color: var(--color-primary); line-height: 1; }
+  .kpi .t { font-size: 15.5px; color: var(--color-ink-soft); line-height: 1.3; }
+
+  .quote { font-size: 22px; line-height: 1.45; color: var(--color-primary); font-weight: 600; }
+  .quote .hl-red { color: var(--color-accent); }
+</style>
+</head>
+<body>
+
+<!-- ============ 1 · PORTADA ============ -->
+<section class="slide s-title">
+  <div class="t-top">
+    <img class="congreso" src="assets/logos/congreso-xix-logo.png" alt="XIX Congreso Nacional de Paleontología">
+    <div class="t-meta"><b>Ponencia oral</b><br>Sociedad Mexicana de Paleontología · La Paz, BCS · 2–6 de noviembre de 2026</div>
+  </div>
+  <div class="t-main">
+    <div class="kicker">Una historia de datos que no existían</div>
+    <h1>PaleoVox GUI: una interfaz intuitiva para manipular y visualizar modelos digitales 3D de fósiles y ejemplificar los resultados de los <span class="hl">algoritmos de aumento de datos</span> de PaleoVox</h1>
+    <div class="t-authors">Alan Gabriel Amaro Colín<sup>1</sup> · Ángel Ángeles Cortés<sup>2</sup> · Jesús Alberto Díaz Cruz<sup>3</sup> · Jair Israel Barrientos Lara<sup>4</sup></div>
+    <div class="t-aff"><sup>1,2</sup>Licenciatura en Física, Facultad de Ciencias, UNAM &nbsp;·&nbsp; <sup>3,4</sup>Departamento de Paleontología, Instituto de Geología, UNAM</div>
+    <div class="t-mail">alan_amaro@ciencias.unam.mx · angel_10@ciencias.unam.mx · vertebrata.j@geologia.unam.mx · j4irbl@geologia.unam.mx</div>
+  </div>
+  <div class="t-keywords">
+    <div class="chips">
+      <span class="chip blue">Paleontología virtual</span>
+      <span class="chip blue">Modelos 3D de fósiles</span>
+      <span class="chip blue">Aumento de datos</span>
+      <span class="chip blue">Interfaz gráfica de usuario</span>
+      <span class="chip blue">Aprendizaje profundo</span>
+    </div>
+  </div>
+  <div class="t-logos">
+    <img src="assets/logos/unam-escudo.png" alt="UNAM" style="height: 56px;">
+    <img src="assets/logos/geologia-color.png" alt="Instituto de Geología" style="height: 52px;">
+    <img src="assets/logos/paleovox-logo.png" alt="PaleoVox" style="height: 50px;">
+    <div class="lg-sep"></div>
+    <img src="assets/logos/uabcs-escudo.png" alt="UABCS" style="height: 52px;">
+    <img src="assets/logos/somexpal.png" alt="SOMEXPAL" style="height: 50px;">
+  </div>
+  <footer class="s-foot"><span>XIX Congreso Nacional de Paleontología · La Paz, BCS</span><span><b>1</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 2 · EL SUEÑO ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">1</div>
+    <div class="s-titles">
+      <div class="act">Capítulo 1 · El problema</div>
+      <h2>El sueño: una IA que ayudara a reconstruir fósiles</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div style="display:flex; gap:18px; flex: 1 1 auto; min-height:0;">
+      <div style="flex: 1.12; display:flex; flex-direction:column; gap:12px; min-width:0; justify-content:center;">
+        <div class="grid g2" style="width:100%;">
+      <div class="tile">
+        <div class="t-head">
+          <svg width="46" height="46" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round">
+            <path d="M10 38 V22 M22 38 V14 M34 38 V28 M42 38 V20" stroke="#0897D5" stroke-width="6" stroke-linecap="butt"/>
+            <path d="M6 42 H44"/>
+          </svg>
+          <h3>Escasos</h3>
+        </div>
+        <p>Cada género está representado por unos pocos ejemplares, repartidos en unos cuantos museos.</p>
+      </div>
+      <div class="tile">
+        <div class="t-head">
+          <svg width="46" height="46" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 40 C12 34 10 26 14 18 C16 12 22 8 30 10 C38 12 42 20 40 28 C38 36 30 42 22 42 Z"/>
+            <path d="M20 30 L28 22 M18 38 L26 30" stroke="#E8442A" stroke-width="3"/>
+          </svg>
+          <h3>Frágiles</h3>
+        </div>
+        <p>Manipularlos los daña; no se puede experimentar con el original una y otra vez.</p>
+      </div>
+      <div class="tile">
+        <div class="t-head">
+          <svg width="46" height="46" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 18 L18 8 L26 16 L40 30 L30 40 L8 18 Z"/>
+            <path d="M20 14 L26 22 M14 22 L22 30" stroke="#E8442A" stroke-width="3.2"/>
+          </svg>
+          <h3>Incompletos</h3>
+        </div>
+        <p>Compactación, erosión y fractura destruyen partes de la forma original.</p>
+      </div>
+      <div class="tile">
+        <div class="t-head">
+          <svg width="46" height="46" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 10 H36 V38 H12 Z"/>
+            <path d="M12 18 H36 M12 26 H36" stroke="#0897D5" stroke-width="3"/>
+            <circle cx="34" cy="14" r="2.4" fill="#E8442A" stroke="none"/>
+          </svg>
+          <h3>Costosos de digitalizar</h3>
+        </div>
+        <p>Tomografía y fotogrametría requieren equipo, tiempo y presupuesto.</p>
+      </div>
+        </div>
+      </div>
+      <div style="flex: 0.88; display:flex; flex-direction:column; gap:12px; min-width:0; justify-content:center;">
+        <div class="card plain" style="padding: 14px 18px;">
+          <p class="lead">Imagina un modelo de aprendizaje profundo capaz de <strong>completar, clasificar y comparar</strong> fósiles incompletos. Para aprender necesita <strong>muchos ejemplos</strong>… y el registro fósil es todo lo contrario:</p>
+        </div>
+        <div class="card accent-l" style="padding: 12px 18px;">
+          <p class="body">Sin datos suficientes, la IA se equivoca justo con lo más común en el campo: <span class="hl-red">fósiles dañados e incompletos</span>. ¿Cómo entrenar modelos que nunca han visto un fósil roto… para reconocer fósiles rotos?</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>2</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 3 · FABRICAR DATOS ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">2</div>
+    <div class="s-titles">
+      <div class="act">Capítulo 2 · La idea</div>
+      <h2>No había datos. Decidimos fabricarlos.</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div style="display:flex; gap:20px; flex: 1 1 auto; min-height: 0;">
+      <div style="flex: 0.9; display:flex; flex-direction:column; gap:10px; min-width:0;">
+        <div class="card plain" style="padding: 12px 16px;">
+          <p class="body">Así nació <strong>PaleoVox</strong>: un <strong>laboratorio virtual de tafonomía</strong>. Toma un modelo 3D y genera muchas variantes dañadas con los procesos que los fósiles realmente sufren:</p>
+        </div>
+        <div class="grid g2" style="gap: 8px;">
+          <div class="tile" style="padding: 9px 13px;"><h3 style="font-size: 14.5px;">Compactación</h3><p style="font-size: 14px;">sedimento que comprime</p></div>
+          <div class="tile" style="padding: 9px 13px;"><h3 style="font-size: 14.5px;">Erosión</h3><p style="font-size: 14px;">material que se pierde</p></div>
+          <div class="tile" style="padding: 9px 13px;"><h3 style="font-size: 14.5px;">Rotación</h3><p style="font-size: 14px;">orientaciones nuevas</p></div>
+          <div class="tile" style="padding: 9px 13px;"><h3 style="font-size: 14.5px;">Fractura</h3><p style="font-size: 14px;">grietas que atraviesan</p></div>
+        </div>
+        <div class="card blue-l" style="padding: 10px 16px;">
+          <p class="body" style="font-size: 17px;">Un solo espécimen puede alimentar <strong>miles de ejemplos de entrenamiento</strong>, sin tocar el fósil original.</p>
+        </div>
+      </div>
+      <div style="flex: 1.1; display:flex; flex-direction:column; justify-content:center; gap:8px; min-width:0;">
+        <div class="storyline">
+          <div class="figframe">
+            <img src="assets/figures/fig_3d_original.png" alt="Escaneo original del cráneo" style="height:268px; object-fit:cover;">
+          </div>
+          <div class="mid">
+            <div class="m-title">AUMENTO DE DATOS</div>
+            <div class="m-arrow">→</div>
+            <div class="m-sub">mismo ejemplar, variantes dañadas sintéticas</div>
+          </div>
+          <div class="figframe">
+            <img src="assets/figures/fig_3d_augmented.png" alt="Variante aumentada del cráneo" style="height:268px; object-fit:cover;">
+          </div>
+        </div>
+        <div class="cap" style="text-align:center;"><b>Izquierda:</b> escaneo original · <b>Derecha:</b> variante generada por PaleoVox (compactada, erosionada y fracturada).</div>
+      </div>
+    </div>
+    <div class="card" style="border-left: 5px solid var(--color-secondary); padding: 10px 18px;">
+      <p class="body" style="font-size: 17px;">En <strong>paleontología virtual</strong> esto es clave: ningún modelo físico se daña y el conjunto de datos crece de forma controlada.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>3</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 4 · EL MURO ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">3</div>
+    <div class="s-titles">
+      <div class="act">Capítulo 2 · El obstáculo</div>
+      <h2>La herramienta existía… pero hablaba en código</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div style="display:flex; gap:18px; flex: 1 1 auto; min-height:0;">
+      <div style="flex: 0.92; display:flex; flex-direction:column; gap:10px; min-width:0; justify-content:center;">
+        <div class="card plain">
+          <p class="body">PaleoVox es una <strong>biblioteca de Python</strong>: potente y flexible… pero cada daño exige <strong>programar</strong>.</p>
+        </div>
+        <div class="codeblock">
+          <span class="cm"># Aplicar daño tafonómico a la rejilla</span><br>
+          v = pv.<span class="fn">deformation</span>(v, <span class="s">0.85</span>, compaction_axis=<span class="s">2</span>)<br>
+          v = pv.<span class="fn">erotion_general</span>(v, axis_idx=<span class="s">0</span>)<br>
+          v = pv.<span class="fn">propagator_fracture</span>(v, max_position=<span class="s">14</span>)
+        </div>
+        <div class="card accent-l" style="padding: 11px 16px;">
+          <p class="body" style="font-size: 17px;">La barrera no era científica: era <span class="hl-red">técnica</span>. Y quien mejor conoce el fósil no siempre escribe código.</p>
+        </div>
+      </div>
+      <div style="flex: 1.08; display:flex; flex-direction:column; gap:8px; min-width:0; justify-content:center;">
+        <div class="shot">
+          <img src="assets/screenshots/gui_loaded.png" alt="PaleoVox GUI con un modelo cargado">
+        </div>
+        <div class="cap" style="text-align:center;"><b>PaleoVox GUI:</b> los mismos algoritmos, ahora en ventanas. Arrastrar el archivo, ajustar parámetros y visualizar.</div>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>4</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 5 · LA GUI DE UN VISTAZO ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">4</div>
+    <div class="s-titles">
+      <div class="act">Capítulo 3 · La solución</div>
+      <h2>PaleoVox GUI de un vistazo</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div style="display:flex; gap:18px; flex: 1 1 auto; min-height: 0;">
+      <div style="flex: 1.72; display:flex; flex-direction:column; gap:7px; min-width: 0;">
+        <div class="shot">
+          <img src="assets/screenshots/gui_full_pipeline.png" alt="Ventana principal de PaleoVox GUI con el flujo completo ejecutado">
+          <div class="badge" style="left: 5.5%; top: 20%;">1</div>
+          <div class="badge" style="left: 5.5%; top: 44%;">2</div>
+          <div class="badge blue" style="left: 46%; top: 3.5%;">3</div>
+          <div class="badge" style="left: 62%; top: 40%;">4</div>
+        </div>
+        <div class="cap"><b>Flujo completo sobre el cráneo:</b> rejilla de 128³ con <b>91,203 vóxeles ocupados</b> tras dilatar, deformar, erosionar y fracturar el modelo.</div>
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px;">
+          <div>
+            <img src="assets/screenshots/gui_tab1_trim.png" alt="Pestaña 1" style="width: 100%; height: 48px; object-fit: cover; object-position: top left; border: 1.5px solid var(--color-border); border-radius: 8px; display: block;">
+            <div style="font-size: 13px; text-align: center; color: var(--color-ink-soft); margin-top: 3px;">1 · Pipeline</div>
+          </div>
+          <div>
+            <img src="assets/screenshots/gui_tab2_trim.png" alt="Pestaña 2" style="width: 100%; height: 48px; object-fit: cover; object-position: top left; border: 1.5px solid var(--color-border); border-radius: 8px; display: block;">
+            <div style="font-size: 13px; text-align: center; color: var(--color-ink-soft); margin-top: 3px;">2 · Reconstrucción</div>
+          </div>
+          <div>
+            <img src="assets/screenshots/gui_tab3_trim.png" alt="Pestaña 3" style="width: 100%; height: 48px; object-fit: cover; object-position: top left; border: 1.5px solid var(--color-border); border-radius: 8px; display: block;">
+            <div style="font-size: 13px; text-align: center; color: var(--color-ink-soft); margin-top: 3px;">3 · Ver y guardar</div>
+          </div>
+          <div>
+            <img src="assets/screenshots/gui_tab4_trim.png" alt="Pestaña 4" style="width: 100%; height: 48px; object-fit: cover; object-position: top left; border: 1.5px solid var(--color-border); border-radius: 8px; display: block;">
+            <div style="font-size: 13px; text-align: center; color: var(--color-ink-soft); margin-top: 3px;">4 · t-SNE</div>
+          </div>
+          <div>
+            <img src="assets/screenshots/gui_tab5_trim.png" alt="Pestaña 5" style="width: 100%; height: 48px; object-fit: cover; object-position: top left; border: 1.5px solid var(--color-border); border-radius: 8px; display: block;">
+            <div style="font-size: 13px; text-align: center; color: var(--color-ink-soft); margin-top: 3px;">5 · Perspectivas 2D</div>
+          </div>
+        </div>
+      </div>
+      <div style="flex: 1; display:flex; flex-direction:column; gap:11px; min-width: 0; justify-content:space-between;">
+        <div class="legend">
+          <div class="lg-item"><div class="badge">1</div><p><b>Zona de arrastre.</b> Se carga un <b>.ply</b>, <b>.obj</b> o <b>.npy</b> arrastrando el archivo o explorando el equipo.</p></div>
+          <div class="lg-item"><div class="badge">2</div><p><b>Información del modelo.</b> Ruta, vértices, triángulos y estado de la rejilla de vóxeles.</p></div>
+          <div class="lg-item"><div class="badge blue">3</div><p><b>Cinco pestañas</b> que ordenan el flujo: pipeline, reconstrucción, vista, t-SNE y perspectivas 2D.</p></div>
+          <div class="lg-item"><div class="badge">4</div><p><b>Controles con valores por defecto</b> documentados; <b>Reset All</b> restaura todo al estado inicial.</p></div>
+        </div>
+        <div class="chips">
+          <span class="chip">34 controles</span>
+          <span class="chip">5 pestañas</span>
+          <span class="chip">100 % local</span>
+          <span class="chip accent">Código abierto (MIT)</span>
+        </div>
+        <div class="card" style="padding: 10px 14px;">
+          <p class="body" style="font-size: 15.5px;"><strong>Visor en ventana aparte:</strong> cada vista 3D se abre en un proceso independiente; la aplicación nunca se bloquea.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>5</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 6 · EL FLUJO SIN CÓDIGO ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">5</div>
+    <div class="s-titles">
+      <div class="act">Capítulo 3 · La solución</div>
+      <h2>El flujo completo, sin escribir una línea de código</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div style="display:flex; gap:16px; flex: 1 1 auto; min-height:0;">
+      <div style="flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; justify-content:center;">
+        <div class="shot"><img src="assets/screenshots/gui_initial.png" alt="Estado inicial de la GUI con la zona de arrastre activa"></div>
+        <div class="cap"><b>1. Así se abre.</b> Zona de arrastre lista; solo se habilita lo que el modelo permite.</div>
+      </div>
+      <div style="flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; justify-content:center;">
+        <div class="shot"><img src="assets/screenshots/gui_loaded.png" alt="Modelo cargado en la GUI"></div>
+        <div class="cap"><b>2. Modelo cargado.</b> Cráneo digitalizado: 1,530,891 vértices y 3,000,000 de triángulos listos para voxelizar.</div>
+      </div>
+    </div>
+    <div class="chain">
+      <div class="step"><b>Arrastrar archivo</b><span>.ply · .obj · .npy</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>Mesh → Voxels</b><span>resolución ajustable</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>Aplicar daños</b><span>se acumulan uno tras otro</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>Voxels → Mesh</b><span>reconstrucción watertight</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>Guardar y exportar</b><span>.npy · .ply · .obj · PNG</span></div>
+    </div>
+    <div class="card blue-l" style="padding: 9px 18px;">
+      <p class="body" style="font-size: 17px;">Todo corre <strong>localmente</strong> en la computadora: sin nube, sin cuentas y sin que los datos salgan del equipo.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>6</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 7 · LOS CUATRO DAÑOS ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">6</div>
+    <div class="s-titles">
+      <div class="act">Capítulo 3 · La solución</div>
+      <h2>Cuatro daños tafonómicos, cuatro historias posibles</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div class="grid g4" style="flex: 1 1 auto; align-content: center;">
+      <div class="damage-card">
+        <div class="thumb"><img src="assets/figures/damage/deformacion_2d.png" alt="Proyección 2D del daño de deformación"></div>
+        <div class="dc">
+          <h3>Deformación</h3>
+          <p>El espécimen sepultado bajo sedimentos: el volumen se <b>comprime</b> en un eje.</p>
+        </div>
+      </div>
+      <div class="damage-card">
+        <div class="thumb"><img src="assets/figures/damage/erosion_2d.png" alt="Proyección 2D del daño de erosión"></div>
+        <div class="dc">
+          <h3>Erosión</h3>
+          <p>El viento y el agua arrancan material: el volumen queda <b>truncado</b>.</p>
+        </div>
+      </div>
+      <div class="damage-card">
+        <div class="thumb"><img src="assets/figures/damage/rotacion_2d.png" alt="Proyección 2D del daño de rotación"></div>
+        <div class="dc">
+          <h3>Rotación</h3>
+          <p>El mismo fósil, hallado en otra posición: cambia la <b>orientación</b>, no la forma.</p>
+        </div>
+      </div>
+      <div class="damage-card">
+        <div class="thumb"><img src="assets/figures/damage/fractura_2d.png" alt="Proyección 2D del daño de fractura"></div>
+        <div class="dc">
+          <h3>Fractura</h3>
+          <p>Golpes y presiones del terreno: <b>grietas</b> que atraviesan y parten el volumen.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card plain" style="display:flex; align-items:center; justify-content:space-between; padding: 10px 18px;">
+      <p class="body" style="font-size: 17px;">Los daños son <strong>combinables, acumulativos y ajustables</strong>: cada uno con sus propios parámetros.</p>
+      <div class="chips">
+        <span class="chip">En las siguientes 4 láminas</span>
+        <span class="chip accent">Vóxeles · Malla 3D · Perspectiva 2D</span>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>7</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 8 · DEFORMACIÓN ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">7</div>
+    <div class="s-titles">
+      <div class="act">Los daños · Vóxel, malla y 2D</div>
+      <h2>Deformación: el peso de los sedimentos</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div class="chips" style="margin-bottom: 2px;">
+      <span class="chip blue">En la GUI: Deformation</span>
+      <span class="chip">Eje Z · factor 0.65</span>
+      <span class="chip accent">El volumen se comprime en Z</span>
+    </div>
+    <div class="panels">
+      <div class="panel">
+        <div class="pimg"><span class="flabel red">Vóxeles</span><img src="assets/figures/damage/deformacion_voxel.png" alt="Vóxeles dañados por deformación"></div>
+        <div class="pcap"><b>Rejilla 256³:</b> cada cubo es un vóxel ocupado de la variante comprimida.</div>
+      </div>
+      <div class="panel">
+        <div class="pimg"><span class="flabel">Malla 3D</span><img src="assets/figures/damage/deformacion_mesh.png" alt="Malla reconstruida del modelo deformado"></div>
+        <div class="pcap"><b>Reconstrucción watertight</b> desde los vóxeles, render PBR material óseo.</div>
+      </div>
+      <div class="panel">
+        <div class="pimg"><span class="flabel blue">Perspectiva 2D</span><img src="assets/figures/damage/deformacion_2d.png" alt="Proyección 2D original contra deformado"></div>
+        <div class="pcap"><b>Original (azul) vs. dañado (rojo):</b> vista XZ; la altura en Z se reduce.</div>
+      </div>
+    </div>
+    <div class="card accent-l" style="padding: 9px 16px;">
+      <p class="body" style="font-size: 17px;"><strong>Qué observar:</strong> el contorno externo se conserva, pero el volumen pierde altura en Z — el efecto clásico de un fósil aplastado por el sedimento.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>8</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 9 · EROSIÓN ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">8</div>
+    <div class="s-titles">
+      <div class="act">Los daños · Vóxel, malla y 2D</div>
+      <h2>Erosión: lo que el tiempo se llevó</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div class="chips" style="margin-bottom: 2px;">
+      <span class="chip blue">En la GUI: Erosion</span>
+      <span class="chip">Eje X · incremento 0.40</span>
+      <span class="chip accent">El material se trunca en un extremo</span>
+    </div>
+    <div class="panels">
+      <div class="panel">
+        <div class="pimg"><span class="flabel red">Vóxeles</span><img src="assets/figures/damage/erosion_voxel.png" alt="Vóxeles dañados por erosión"></div>
+        <div class="pcap"><b>Rejilla 256³ desde el frente:</b> la sección erosionada deja un borde recto.</div>
+      </div>
+      <div class="panel">
+        <div class="pimg"><span class="flabel">Malla 3D</span><img src="assets/figures/damage/erosion_mesh.png" alt="Malla reconstruida del modelo erosionado"></div>
+        <div class="pcap"><b>Reconstrucción watertight:</b> una malla cerrada del fósil incompleto.</div>
+      </div>
+      <div class="panel">
+        <div class="pimg"><span class="flabel blue">Perspectiva 2D</span><img src="assets/figures/damage/erosion_2d.png" alt="Proyección 2D original contra erosionado"></div>
+        <div class="pcap"><b>Original (azul) vs. dañado (rojo):</b> vista XY; el corte deja un borde recto.</div>
+      </div>
+    </div>
+    <div class="card accent-l" style="padding: 9px 16px;">
+      <p class="body" style="font-size: 17px;"><strong>Qué observar:</strong> se pierde un extremo completo del espécimen, como en los fósiles incompletos que llegan al laboratorio.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>9</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 10 · ROTACIÓN ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">9</div>
+    <div class="s-titles">
+      <div class="act">Los daños · Vóxel, malla y 2D</div>
+      <h2>Rotación: el mismo fósil, otra orientación</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div class="chips" style="margin-bottom: 2px;">
+      <span class="chip blue">En la GUI: Rotation</span>
+      <span class="chip">X 15° · Y 25° · Z 10°</span>
+      <span class="chip accent">Cambia la pose, no la forma</span>
+    </div>
+    <div class="panels">
+      <div class="panel">
+        <div class="pimg"><span class="flabel red">Vóxeles</span><img src="assets/figures/damage/rotacion_voxel.png" alt="Vóxeles rotados"></div>
+        <div class="pcap"><b>Rejilla 256³:</b> el giro es rígido, alrededor del centro del volumen.</div>
+      </div>
+      <div class="panel">
+        <div class="pimg"><span class="flabel">Malla 3D</span><img src="assets/figures/damage/rotacion_mesh.png" alt="Malla reconstruida del modelo rotado"></div>
+        <div class="pcap"><b>Reconstrucción watertight</b> de la variante rotada; misma forma, otra pose.</div>
+      </div>
+      <div class="panel">
+        <div class="pimg"><span class="flabel blue">Perspectiva 2D</span><img src="assets/figures/damage/rotacion_2d.png" alt="Proyección 2D original contra rotado"></div>
+        <div class="pcap"><b>Original (azul) vs. dañado (rojo):</b> vista YZ; la huella cambia de inclinación.</div>
+      </div>
+    </div>
+    <div class="card accent-l" style="padding: 9px 16px;">
+      <p class="body" style="font-size: 17px;"><strong>Qué observar:</strong> la geometría es idéntica, solo girada. Entrena modelos <strong>invariantes a la orientación</strong>, como un fósil hallado en cualquier posición.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>10</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 11 · FRACTURA ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">10</div>
+    <div class="s-titles">
+      <div class="act">Los daños · Vóxel, malla y 2D</div>
+      <h2>Fractura: las grietas del terreno</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div class="chips" style="margin-bottom: 2px;">
+      <span class="chip blue">En la GUI: Fracture</span>
+      <span class="chip">Propagación: max pos 14</span>
+      <span class="chip accent">Las grietas eliminan material a su paso</span>
+    </div>
+    <div class="panels">
+      <div class="panel">
+        <div class="pimg"><span class="flabel red">Vóxeles</span><img src="assets/figures/damage/fractura_voxel.png" alt="Vóxeles fracturados"></div>
+        <div class="pcap"><b>Rejilla 256³:</b> el volumen en gris y las <b>grietas en rojo</b> que lo atraviesan.</div>
+      </div>
+      <div class="panel">
+        <div class="pimg"><span class="flabel">Malla 3D</span><img src="assets/figures/damage/fractura_mesh.png" alt="Malla reconstruida del modelo fracturado"></div>
+        <div class="pcap"><b>Reconstrucción watertight</b> del espécimen agrietado.</div>
+      </div>
+      <div class="panel">
+        <div class="pimg"><span class="flabel blue">Perspectiva 2D</span><img src="assets/figures/damage/fractura_2d.png" alt="Proyección 2D original contra fracturado"></div>
+        <div class="pcap"><b>Grietas (rojo) sobre el contorno original (azul):</b> vista YZ.</div>
+      </div>
+    </div>
+    <div class="card accent-l" style="padding: 9px 16px;">
+      <p class="body" style="font-size: 17px;"><strong>Qué observar:</strong> las grietas siguen trayectorias continuas; simulan los fósiles rotos y parcialmente perdidos del registro real.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>11</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 12 · LA HISTORIA COMPLETA ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">11</div>
+    <div class="s-titles">
+      <div class="act">El ejemplo completo</div>
+      <h2>Un fósil con historia: los daños combinados</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div style="display:flex; gap:22px; flex: 1 1 auto; align-items:center; justify-content:center;">
+      <div style="text-align:center; flex:1; min-width:0;">
+        <div class="figframe"><img src="assets/figures/fig_3d_original.png" alt="Escaneo original del cráneo" style="height:330px; object-fit:cover;"></div>
+        <div class="cap" style="margin-top:7px;"><b>Escaneo original:</b> cráneo digitalizado · 3,000,000 de triángulos.</div>
+      </div>
+      <div style="text-align:center; flex:0 0 auto; max-width: 160px;">
+        <div style="font-size: 13.5px; font-weight:800; color:var(--color-primary); font-family:'Montserrat'; letter-spacing:0.05em;">COMPACTACIÓN 0.85<br>+ EROSIÓN 0.45<br>+ FRACTURA 14</div>
+        <div style="font-size: 28px; color:var(--color-secondary); font-weight:800; margin: 6px 0;">⟶</div>
+        <div class="cap">daños acumulados,<br>paso a paso en la GUI</div>
+      </div>
+      <div style="text-align:center; flex:1; min-width:0;">
+        <div class="figframe"><img src="assets/figures/damage/combinado_mesh.png" alt="Variante combinada reconstruida" style="height:330px; object-fit:cover;"></div>
+        <div class="cap" style="margin-top:7px;"><b>Variante aumentada:</b> malla watertight reconstruida desde los vóxeles dañados.</div>
+      </div>
+    </div>
+    <div class="card blue-l" style="padding: 10px 18px;">
+      <p class="body" style="font-size: 17px;">Los daños se acumulan en el orden que elijas y la reconstrucción <strong>conserva la escala y la posición</strong> del modelo original: listo para comparar y exportar.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>12</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 13 · ANÁLISIS ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">12</div>
+    <div class="s-titles">
+      <div class="act">El análisis</div>
+      <h2>¿El daño es creíble? La GUI permite verificarlo</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div style="display:flex; gap:18px; flex: 1 1 auto; min-height: 0;">
+      <div style="flex: 1.15; display:flex; flex-direction:column; gap:7px; min-width:0;">
+        <div class="figframe" style="flex:1 1 auto; display:flex; align-items:center; background:#fff;">
+          <img src="assets/figures/fig_tsne.png" alt="Comparación t-SNE entre el modelo original y el aumentado" style="max-height: 400px; object-fit:contain;">
+        </div>
+        <div class="cap"><b>t-SNE (pestaña 4):</b> cada punto es un vóxel. La nube aumentada <b>conserva la estructura global</b> del espécimen en el espacio compartido.</div>
+      </div>
+      <div style="flex: 1; display:flex; flex-direction:column; gap:7px; min-width:0;">
+        <div class="figframe" style="flex:1 1 auto; display:flex; align-items:center; background:#fff;">
+          <img src="assets/figures/damage/combinado_2d.png" alt="Perspectiva 2D de la variante combinada" style="max-height: 400px; object-fit:contain;">
+        </div>
+        <div class="cap"><b>Perspectiva 2D (pestaña 5):</b> original en azul contra la variante en rojo (vista XZ); se ve con precisión qué se perdió y qué se conservó.</div>
+      </div>
+    </div>
+    <div class="card accent-l" style="padding: 10px 18px;">
+      <p class="body" style="font-size: 17px;">La lectura es directa: el daño es <strong>plausible, no ruido aleatorio</strong>. Ambas figuras se exportan desde la GUI <strong>listas para reportes y artículos científicos</strong>.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>13</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 14 · IMPACTO Y CAMINO ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">13</div>
+    <div class="s-titles">
+      <div class="act">Impacto y camino</div>
+      <h2>Qué deja PaleoVox GUI a la paleontología</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div class="grid g4">
+      <div class="metric"><div class="m-num">4</div><div class="m-txt">daños tafonómicos combinables</div></div>
+      <div class="metric"><div class="m-num">5 <small>·</small> 34</div><div class="m-txt">pestañas y controles con valores por defecto</div></div>
+      <div class="metric"><div class="m-num">4</div><div class="m-txt">formas de visualizar: vóxeles, malla PBR, t-SNE y 2D</div></div>
+      <div class="metric"><div class="m-num">100<small>%</small></div><div class="m-txt">local, gratuito y de código abierto</div></div>
+    </div>
+    <div class="grid g3" style="flex: 1 1 auto; align-content: center;">
+      <div class="card plain">
+        <h3 style="font-family:'Montserrat'; font-size: 17.5px; color: var(--color-primary); margin-bottom: 9px;">Lo que ya hace</h3>
+        <ul class="checks" style="margin-top:2px;">
+          <li>Aplica y visualiza el aumento de datos <strong>sin programar</strong>.</li>
+          <li>Daños <strong>controlados, acumulables y reproducibles</strong>.</li>
+          <li>Exporta mallas, vóxeles y figuras de <strong>alta calidad</strong>.</li>
+        </ul>
+      </div>
+      <div class="card plain">
+        <h3 style="font-family:'Montserrat'; font-size: 17.5px; color: var(--color-primary); margin-bottom: 9px;">Para quién</h3>
+        <ul class="checks" style="margin-top:2px;">
+          <li><strong>Investigación</strong> en paleontología virtual y aprendizaje profundo.</li>
+          <li><strong>Curaduría</strong> de colecciones digitalizadas.</li>
+          <li><strong>Museos, difusión y docencia</strong> con modelos 3D interactivos.</li>
+        </ul>
+      </div>
+      <div class="card plain" style="border-left: 5px solid var(--color-accent);">
+        <h3 style="font-family:'Montserrat'; font-size: 17.5px; color: var(--color-accent); margin-bottom: 9px;">Límites y siguiente paso</h3>
+        <ul class="checks warn" style="margin-top:2px;">
+          <li><strong>Aumento sintético</strong>: aproxima la tafonomía, no reconstruye la verdad biológica.</li>
+          <li>Los modelos entrenados deben <strong>validarse</strong>.</li>
+          <li>Futuro: <strong>aumentación en lote</strong>, semillas reproducibles, adaptador PyTorch y nuevos daños.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="border-left: 5px solid var(--color-secondary); padding: 10px 18px;">
+      <p class="body" style="font-size: 17px;">PaleoVox GUI <strong>complementa el ecosistema PaleoVox</strong> y acerca la visualización avanzada a quien conoce el fósil… <strong>no la terminal</strong>.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>14</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<!-- ============ 15 · GRACIAS ============ -->
+<section class="slide">
+  <header class="s-head">
+    <div class="s-num">14</div>
+    <div class="s-titles">
+      <div class="act">Cierre</div>
+      <h2>Gracias — ¿preguntas?</h2>
+    </div>
+    <div class="s-rule"></div>
+  </header>
+  <div class="s-body">
+    <div style="display:flex; gap:22px; flex: 1 1 auto; min-height: 0;">
+      <div style="flex: 1.35; display:flex; flex-direction:column; gap:11px; justify-content: center;">
+        <div class="quote">De un modelo imposible de conseguir… a <span class="hl-red">miles de variantes listas para entrenar</span>, sin escribir una línea de código.</div>
+        <ul class="checks" style="margin-top: 4px;">
+          <li>Flujo de extremo a extremo: <strong>malla → vóxeles → daño → reconstrucción → exportación</strong>.</li>
+          <li>Análisis visual integrado: <strong>t-SNE, perspectivas 2D y render PBR</strong>.</li>
+          <li>Herramienta <strong>local, gratuita y abierta</strong> para la comunidad paleontológica.</li>
+        </ul>
+        <div class="chips">
+          <span class="chip blue">Paleontología virtual</span>
+          <span class="chip blue">Aumento de datos</span>
+          <span class="chip blue">Código abierto</span>
+          <span class="chip blue">Interfaz gráfica</span>
+        </div>
+        <div class="card" style="padding: 11px 15px;">
+          <div style="font-family:'Montserrat','PVSymbols',Arial,sans-serif; font-weight: 700; font-size: 14px; color: var(--color-primary); margin-bottom: 5px;">REFERENCIAS CLAVE</div>
+          <p class="body" style="font-size: 13.5px; line-height: 1.5; color: var(--color-ink-soft);">
+            [1] PaleoVox — Documento único de verdad (SSOT), UNAM, 2026. · [2] Zhou, Park y Koltun, <i>Open3D</i>, arXiv:1801.09847, 2018. · [3] van der Walt et al., <i>scikit-image</i>, PeerJ 2:e453, 2014. · [4] Pedregosa et al., <i>scikit-learn</i>, JMLR 12:2825–2830, 2011. · [5] Virtanen et al., <i>SciPy 1.0</i>, Nature Methods 17:261–272, 2020.
+          </p>
+        </div>
+      </div>
+      <div style="flex: 1; background: var(--color-primary); border-radius: 16px; padding: 20px 22px; color: #fff; display:flex; flex-direction:column; gap: 11px;">
+        <div style="font-family:'Montserrat'; font-weight:800; font-size: 30px;">¡Gracias!</div>
+        <div style="font-size: 15.5px; line-height: 1.55; color: #CFE6F5;">
+          <b style="color:#fff;">Contacto:</b> alan_amaro@ciencias.unam.mx<br>
+          <b style="color:#fff;">Repositorio:</b> github.com/ChuchoDC/PaleoVox<br>
+          <b style="color:#fff;">Licencia:</b> MIT · Python 3.9 · versión 1.0.6
+        </div>
+        <div style="display:flex; align-items:center; gap:15px; margin-top:auto;">
+          <div style="background:#fff; border-radius: 12px; padding: 7px;"><img src="assets/qr_repo.svg" alt="Código QR del repositorio" style="width: 100px; height: 100px; display:block;"></div>
+          <div style="font-size: 14px; line-height: 1.5; color: #CFE6F5;">Escanea para explorar el código y la documentación del proyecto.<br><br><b style="color:#fff;">Facultad de Ciencias e Instituto de Geología, UNAM</b></div>
+        </div>
+        <div style="display:flex; gap: 9px; align-items:center; margin-top: 7px;">
+          <div style="background:#fff; border-radius: 10px; padding: 6px 10px;"><img src="assets/logos/unam-azul.png" alt="UNAM" style="height: 38px; display: block;"></div>
+          <div style="background:#fff; border-radius: 10px; padding: 6px 10px;"><img src="assets/logos/geologia-color.png" alt="Instituto de Geología" style="height: 34px; display: block;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>XIX Congreso Nacional de Paleontología · La Paz, BCS · 2026</span><span><b>15</b> / 15</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+/* PaleoVox poster fonts — static instances (Google Fonts, via @fontsource).
+   Montserrat = Gotham substitute (headlines) · Open Sans = body, per UNAM brandbook guidance.
+   Static weight files (not variable) so print PDFs embed proper TrueType subsets. */
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 400; font-display: block; src: url(static/montserrat-400.woff2) format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 500; font-display: block; src: url(static/montserrat-500.woff2) format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 600; font-display: block; src: url(static/montserrat-600.woff2) format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 700; font-display: block; src: url(static/montserrat-700.woff2) format('woff2'); }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 800; font-display: block; src: url(static/montserrat-800.woff2) format('woff2'); }
+@font-face { font-family: 'Open Sans'; font-style: normal; font-weight: 400; font-display: block; src: url(static/opensans-400.woff2) format('woff2'); }
+@font-face { font-family: 'Open Sans'; font-style: normal; font-weight: 600; font-display: block; src: url(static/opensans-600.woff2) format('woff2'); }
+@font-face { font-family: 'Open Sans'; font-style: normal; font-weight: 700; font-display: block; src: url(static/opensans-700.woff2) format('woff2'); }
+@font-face { font-family: 'Open Sans'; font-style: italic; font-weight: 400; font-display: block; src: url(static/opensans-400-italic.woff2) format('woff2'); }
+@font-face { font-family: 'PVSymbols'; font-style: normal; font-weight: 400; font-display: block; src: url(static/DejaVuSans.ttf) format('truetype'); }
