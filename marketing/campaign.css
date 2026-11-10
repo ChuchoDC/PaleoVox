@@ -1,0 +1,103 @@
+/* PaleoVox Instagram campaign — UNAM palette (branding/brandbook.md) + deck fonts. */
+@import url('../presentation/assets/fonts/fonts.css');
+
+:root {
+  --blue: #003D64;        /* UNAM primary */
+  --blue-2: #1F6FA8;
+  --sky: #0897D5;         /* accent bright blue */
+  --red: #E8442A;         /* damage only */
+  --gg: #7F9297;          /* grey-green */
+  --grey: #EAEDEF;        /* UNAM light grey */
+  --gold: #DFA726;        /* sampled from unam-dorado.png */
+  --ink: #16262F;
+  --ink-soft: #3E5560;
+  --card: #F7FAFB;
+  --border: #D6DEE3;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #c9d1d6; font-family: 'Open Sans', 'PVSymbols', Arial, sans-serif; color: var(--ink);
+       display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 40px 0; }
+.card { position: relative; overflow: hidden; background: var(--card); display: flex; flex-direction: column; }
+.post  { width: 1080px; height: 1350px; }
+.story { width: 1080px; height: 1920px; }
+
+.mont, h1, h2, .kicker, .chip b, .pill { font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif; }
+
+/* Header */
+.head { display: flex; align-items: center; gap: 22px; padding: 56px 64px 0; }
+.badge { background: var(--blue); color: #fff; font-family: 'Montserrat', sans-serif; font-weight: 800;
+         font-size: 40px; width: 84px; height: 84px; border-radius: 20px; display: grid; place-items: center; flex: none; }
+.kicker { font-weight: 800; font-size: 24px; letter-spacing: .2em; text-transform: uppercase; color: var(--sky); }
+.kicker .en { color: var(--gg); }
+.head .rule { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--sky), var(--grey)); }
+
+/* Titles: ES big, EN underneath */
+.titles { padding: 30px 64px 0; }
+h1 { font-weight: 800; font-size: 70px; line-height: 1.05; letter-spacing: -.015em; color: var(--blue); }
+h1 .hl { color: var(--sky); }
+h1 .dmg { color: var(--red); }
+h2 { font-weight: 600; font-size: 38px; line-height: 1.15; color: var(--gg); margin-top: 14px; font-style: italic; }
+
+/* Body */
+.body { padding: 0 64px; }
+.lead { font-size: 31px; line-height: 1.35; color: var(--ink); }
+.lead b { color: var(--blue); }
+.lead.en { color: var(--ink-soft); font-style: italic; font-size: 28px; margin-top: 8px; }
+
+/* Image panels */
+.panels { display: flex; gap: 20px; padding: 0 64px; }
+.panel { flex: 1; border-radius: 22px; overflow: hidden; background: #fff; border: 2px solid var(--border); position: relative; }
+.panel img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.panel.contain img { object-fit: contain; }
+.tag { position: absolute; left: 14px; top: 14px; background: rgba(0, 61, 100, .92); color: #fff; border-radius: 12px;
+       padding: 8px 14px; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 22px; }
+.tag i { font-weight: 500; opacity: .8; }
+
+/* Chips */
+.chips { display: flex; gap: 16px; padding: 0 64px; flex-wrap: wrap; }
+.chip { flex: 1; background: #fff; border: 2px solid var(--border); border-left: 8px solid var(--sky); border-radius: 18px;
+        padding: 16px 20px; font-size: 24px; color: var(--ink-soft); line-height: 1.25; }
+.chip b { display: block; font-weight: 800; font-size: 27px; color: var(--blue); }
+.chip.red { border-left-color: var(--red); }
+.pill { display: inline-block; background: var(--blue); color: #fff; font-weight: 700; font-size: 24px;
+        border-radius: 999px; padding: 10px 22px; }
+.pill.red { background: var(--red); }
+.pill.gold { background: var(--gold); color: var(--blue); }
+
+.grow { flex: 1; }
+.gap-s { height: 22px; } .gap-m { height: 34px; } .gap-l { height: 50px; }
+
+/* Footer: two-colour logos always on white with clear space (brandbook §5.2, §5.4) */
+.foot { background: #fff; border-top: 2px solid var(--border); display: flex; align-items: center; gap: 28px;
+        padding: 26px 64px 34px; position: relative; }
+.foot img { height: 82px; width: auto; display: block; }
+.foot .who { font-size: 22px; line-height: 1.3; color: var(--ink-soft); }
+.foot .who b { font-family: 'Montserrat', sans-serif; color: var(--blue); font-weight: 800; font-size: 25px; }
+.foot .pv { margin-left: auto; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 34px; color: var(--blue); }
+.foot .pv span { color: var(--sky); }
+.stripe { position: absolute; left: 0; right: 0; bottom: 0; height: 12px;
+          background: linear-gradient(90deg, var(--blue) 0%, var(--sky) 55%, var(--red) 100%); }
+
+/* Blue (award) variant */
+.card.blue { background: var(--blue); }
+.card.blue h1 { color: #fff; }
+.card.blue h1 .gold { color: var(--gold); }
+.card.blue h2 { color: #B9D7EA; }
+.card.blue .lead { color: #fff; }
+.card.blue .lead b { color: var(--gold); }
+.card.blue .lead.en { color: #B9D7EA; }
+.card.blue .kicker { color: var(--gold); }
+.card.blue .kicker .en { color: #B9D7EA; }
+.card.blue .head .rule { background: linear-gradient(90deg, var(--gold), rgba(255,255,255,.1)); }
+.card.blue .badge { background: var(--gold); color: var(--blue); }
+
+/* Stories: Instagram UI covers ~250px top and ~340px bottom */
+.story .safe-top { height: 250px; flex: none; }
+.story .safe-bot { height: 340px; flex: none; background: #fff; }
+.story .foot { border-top: none; }
+.story h1 { font-size: 84px; }
+.story h2 { font-size: 44px; }
+.story .lead { font-size: 36px; }
+.story .lead.en { font-size: 32px; }
+.sticker-zone { margin: 0 64px; border-radius: 28px; flex: none; }

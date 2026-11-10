@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>PaleoVox GUI — XIX Congreso Nacional de Paleontología</title>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<style>
+  @page { size: 1280px 720px; margin: 0; }
+
+  :root {
+    --color-primary: #003D64;
+    --color-primary-2: #1F6FA8;
+    --color-secondary: #0897D5;
+    --color-accent: #E8442A;
+    --color-greengrey: #7F9297;
+    --color-background: #FFFFFF;
+    --color-card: #F7FAFB;
+    --color-muted: #EAEDEF;
+    --color-border: #D6DEE3;
+    --color-foreground: #16262F;
+    --color-ink-soft: #3E5560;
+    --space-1: 8px; --space-2: 16px; --space-3: 24px; --space-4: 32px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { background: #ffffff; }
+
+  body {
+    width: 1280px;
+    font-family: 'Open Sans', 'PVSymbols', Arial, sans-serif;
+    color: var(--color-foreground);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .slide {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    background: var(--color-background);
+    padding: 34px 52px 46px 52px;
+    display: flex;
+    flex-direction: column;
+    page-break-after: always;
+  }
+  .slide:last-child { page-break-after: auto; }
+
+  .s-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex: 0 0 auto; }
+  .s-num {
+    flex: 0 0 auto; width: 40px; height: 40px; border-radius: 10px;
+    background: var(--color-primary); color: #fff;
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 800; font-size: 24px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .s-head h2 {
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 700; font-size: 30px; letter-spacing: -0.01em;
+    color: var(--color-primary); line-height: 1.1;
+  }
+  .s-rule { flex: 1 1 auto; height: 4px; border-radius: 2px; margin-left: 8px;
+    background: linear-gradient(90deg, var(--color-secondary), var(--color-muted)); }
+
+  .s-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+
+  .s-foot {
+    position: absolute; left: 52px; right: 52px; bottom: 15px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12.5px; letter-spacing: 0.03em; color: var(--color-greengrey);
+  }
+  .s-foot b { color: var(--color-primary); font-weight: 600; }
+  .accent-strip { position: absolute; left: 0; right: 0; bottom: 0; height: 5px;
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 55%, var(--color-accent) 100%); }
+
+  .card { background: var(--color-card); border: 1.5px solid var(--color-border); border-radius: 14px; padding: 16px 20px; }
+  .card.plain { background: #fff; }
+  .card.limit { border-color: #F2C9BF; background: #FFF9F7; }
+
+  p.body { font-size: 18px; line-height: 1.55; color: var(--color-foreground); }
+  p.lead { font-size: 20px; line-height: 1.5; }
+  strong { color: var(--color-primary); }
+  .hl-red { color: var(--color-accent); font-style: normal; font-weight: 700; }
+  .hl-blue { color: var(--color-secondary); font-weight: 700; }
+
+  ul.checks { list-style: none; }
+  ul.checks li { position: relative; padding-left: 30px; font-size: 16.5px; line-height: 1.45; margin-bottom: 10px; }
+  ul.checks li:last-child { margin-bottom: 0; }
+  ul.checks li::before {
+    content: ""; position: absolute; left: 0; top: 4px; width: 18px; height: 18px;
+    border-radius: 5px; background: var(--color-secondary);
+  }
+  ul.checks li::after {
+    content: ""; position: absolute; left: 5px; top: 10px; width: 8px; height: 4px;
+    border-left: 3px solid #fff; border-bottom: 3px solid #fff; transform: rotate(-45deg);
+  }
+
+  ul.checks.roomy li { font-size: 17px; margin-bottom: 16px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 600; font-size: 14px; color: var(--color-primary);
+    background: var(--color-muted); border-radius: 999px; padding: 4px 13px;
+  }
+  .chip.accent { background: #FFEDE9; color: var(--color-accent); }
+  .chip.blue { background: #E4F3FC; color: #0A6FA8; }
+
+  .cap { font-size: 13.5px; line-height: 1.45; color: var(--color-ink-soft); }
+  .cap b { color: var(--color-primary); }
+
+  .shot { position: relative; border: 1.5px solid var(--color-border); border-radius: 12px; overflow: hidden; background: #fff; }
+  .shot img { display: block; width: 100%; }
+
+  .badge {
+    position: absolute; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--color-accent); color: #fff; border: 2px solid #fff;
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 800; font-size: 14.5px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .badge.blue { background: var(--color-secondary); }
+
+  .grid { display: grid; gap: 14px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: 1fr 1fr 1fr; }
+  .g4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .tile { background: #fff; border: 1.5px solid var(--color-border); border-radius: 14px; padding: 16px 18px; }
+  .tile .t-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .tile svg { flex: 0 0 auto; }
+  .tile h3 {
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-size: 18px; font-weight: 700; color: var(--color-primary); line-height: 1.15;
+  }
+  .tile p { font-size: 14.5px; line-height: 1.45; color: var(--color-ink-soft); }
+
+  .metric { background: var(--color-card); border: 1.5px solid var(--color-border); border-radius: 14px;
+    padding: 13px 16px; display: flex; align-items: center; gap: 13px; }
+  .metric .m-num {
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 800; font-size: 29px; color: var(--color-primary); line-height: 1; white-space: nowrap;
+  }
+  .metric .m-num small { font-size: 15.5px; font-weight: 700; }
+  .metric .m-txt { font-size: 14px; line-height: 1.35; color: var(--color-ink-soft); }
+
+  .chain { display: flex; align-items: stretch; gap: 0; }
+  .chain .step { flex: 1 1 0; background: #fff; border: 1.5px solid var(--color-border); border-radius: 12px;
+    padding: 10px 8px; text-align: center; }
+  .chain .step b { display: block; font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-size: 14px; font-weight: 700; color: var(--color-primary); line-height: 1.2; }
+  .chain .step span { font-size: 12.5px; color: var(--color-greengrey); line-height: 1.25; display: block; margin-top: 3px; }
+  .chain .arrow { flex: 0 0 22px; display: flex; align-items: center; justify-content: center;
+    color: var(--color-secondary); font-weight: 800; font-size: 16.5px; }
+
+  .pipe-row { display: flex; align-items: center; gap: 8px; }
+  .pipe-box { flex: 1 1 0; background: #fff; border: 2px solid var(--color-primary); border-radius: 12px;
+    padding: 11px 6px; text-align: center; }
+  .pipe-box.alt { border-color: var(--color-secondary); }
+  .pipe-box b { display: block; font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-size: 14.5px; font-weight: 700; color: var(--color-primary); }
+  .pipe-box span { display: block; font-size: 12.5px; color: var(--color-greengrey); margin-top: 3px; }
+  .pipe-arrow { flex: 0 0 20px; text-align: center; color: var(--color-secondary); font-weight: 800; font-size: 18px; }
+
+  .s-title { padding: 0; }
+  .t-top { display: flex; justify-content: space-between; align-items: center; padding: 20px 52px 12px 52px; flex: 0 0 auto; }
+  .t-top img.congreso { height: 52px; display: block; }
+  .t-top .t-meta { text-align: right; font-size: 13.5px; color: var(--color-ink-soft); line-height: 1.5; }
+  .t-top .t-meta b { color: var(--color-primary); font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif; }
+  .t-main { flex: 1 1 auto; padding: 0 84px; display: flex; flex-direction: column; justify-content: center; }
+  .kicker { font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif; font-weight: 800; font-size: 14.5px;
+    letter-spacing: 0.32em; color: var(--color-secondary); text-transform: uppercase; margin-bottom: 12px; }
+  .t-main h1 {
+    font-family: 'Montserrat', 'PVSymbols', Arial, sans-serif;
+    font-weight: 800; font-size: 33px; line-height: 1.22; color: var(--color-primary);
+  }
+  .t-main h1 .hl { color: var(--color-secondary); }
+  .t-authors { margin-top: 16px; font-size: 16px; font-weight: 600; color: var(--color-foreground); line-height: 1.5; }
+  .t-authors sup { color: var(--color-accent); font-weight: 700; }
+  .t-aff { margin-top: 5px; font-size: 13.5px; color: var(--color-ink-soft); line-height: 1.55; }
+  .t-aff sup { color: var(--color-accent); font-weight: 700; }
+  .t-mail { margin-top: 4px; font-size: 12.5px; color: var(--color-greengrey); }
+  .t-keywords { padding: 0 84px; margin-bottom: 12px; }
+  .t-logos { flex: 0 0 auto; padding: 0 52px 54px 52px; display: flex; align-items: center; justify-content: center; gap: 34px; }
+  .t-logos img { display: block; }
+  .t-logos .lg-sep { width: 1.5px; height: 40px; background: var(--color-border); }
+
+  .legend { display: flex; flex-direction: column; gap: 10px; }
+  .legend .lg-item { display: flex; gap: 10px; align-items: flex-start; }
+  .legend .lg-item .badge { position: static; flex: 0 0 auto; }
+  .legend .lg-item p { font-size: 14px; line-height: 1.4; color: var(--color-ink-soft); }
+  .legend .lg-item p b { color: var(--color-primary); }
+</style>
+</head>
+<body>
+
+<section class="slide s-title">
+  <div class="t-top">
+    <img class="congreso" src="assets/logos/congreso-xix-logo.png" alt="XIX Congreso Nacional de Paleontología">
+    <div class="t-meta"><b>Ponencia oral</b><br>Sociedad Mexicana de Paleontología · La Paz, BCS · 2–6 de noviembre de 2026</div>
+  </div>
+  <div class="t-main">
+    <div class="kicker">Herramienta de código abierto · UNAM</div>
+    <h1>PaleoVox GUI: una interfaz intuitiva para manipular y visualizar modelos digitales 3D de fósiles y ejemplificar los <span class="hl">resultados de los algoritmos de aumento de datos</span> de PaleoVox</h1>
+    <div class="t-authors">Alan Gabriel Amaro Colín<sup>1</sup> · Ángel Ángeles Cortés<sup>2</sup> · Jesús Alberto Díaz Cruz<sup>3</sup> · Jair Israel Barrientos Lara<sup>4</sup></div>
+    <div class="t-aff"><sup>1,2</sup>Licenciatura en Física, Facultad de Ciencias, UNAM &nbsp;·&nbsp; <sup>3,4</sup>Departamento de Paleontología, Instituto de Geología, UNAM</div>
+    <div class="t-mail">alan_amaro@ciencias.unam.mx · angel_10@ciencias.unam.mx · vertebrata.j@geologia.unam.mx · j4irbl@geologia.unam.mx</div>
+  </div>
+  <div class="t-keywords">
+    <div class="chips">
+      <span class="chip blue">Paleontología virtual</span>
+      <span class="chip blue">Modelos 3D de fósiles</span>
+      <span class="chip blue">Aumento de datos</span>
+      <span class="chip blue">Interfaz gráfica de usuario</span>
+      <span class="chip blue">Aprendizaje profundo</span>
+    </div>
+  </div>
+  <div class="t-logos">
+    <img src="assets/logos/unam-escudo.png" alt="UNAM" style="height: 58px;">
+    <img src="assets/logos/geologia-color.png" alt="Instituto de Geología" style="height: 54px;">
+    <img src="assets/logos/paleovox-logo.png" alt="PaleoVox" style="height: 52px;">
+    <div class="lg-sep"></div>
+    <img src="assets/logos/uabcs-escudo.png" alt="UABCS" style="height: 54px;">
+    <img src="assets/logos/somexpal.png" alt="SOMEXPAL" style="height: 52px;">
+  </div>
+  <footer class="s-foot"><span>XIX Congreso Nacional de Paleontología · La Paz, BCS</span><span><b>1</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">1</div><h2>El problema: datos escasos para la paleontología digital</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div class="card">
+      <p class="lead">Los fósiles constituyen la <strong>única evidencia directa</strong> de la morfología de los géneros extintos. Dada la naturaleza fragmentaria del registro fósil, muchas formas permanecen <strong>desconocidas o incompletas</strong> para la ciencia, y el entrenamiento de modelos de aprendizaje profundo está limitado por el <strong>número de muestras disponibles</strong> — problemática que aborda PaleoVox.</p>
+    </div>
+    <div style="flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: 16px;">
+      <div class="grid g4" style="width: 100%;">
+        <div class="tile">
+        <div class="t-head">
+          <svg width="52" height="52" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round">
+            <path d="M10 38 V22 M22 38 V14 M34 38 V28 M42 38 V20" stroke="#0897D5" stroke-width="6" stroke-linecap="butt"/>
+            <path d="M6 42 H44" />
+          </svg>
+          <h3>Escasez de datos</h3>
+        </div>
+        <p>Pocos ejemplares limpios y completos para entrenar modelos de IA.</p>
+      </div>
+      <div class="tile">
+        <div class="t-head">
+          <svg width="52" height="52" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 18 L18 8 L26 16 L40 30 L30 40 L8 18 Z"/>
+            <path d="M20 14 L26 22 M14 22 L22 30 M26 32 L32 38" stroke="#E8442A" stroke-width="3.2"/>
+          </svg>
+          <h3>Registro fragmentario</h3>
+        </div>
+        <p>Erosión, compactación y fractura destruyen parte del material original.</p>
+      </div>
+      <div class="tile">
+        <div class="t-head">
+          <svg width="52" height="52" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 10 H36 V38 H12 Z"/>
+            <path d="M12 18 H36 M12 26 H36" stroke="#0897D5" stroke-width="3"/>
+            <circle cx="34" cy="14" r="2.4" fill="#E8442A" stroke="none"/>
+          </svg>
+          <h3>Digitalización costosa</h3>
+        </div>
+        <p>TC y fotogrametría requieren equipo, tiempo y presupuesto.</p>
+      </div>
+      <div class="tile">
+        <div class="t-head">
+          <svg width="52" height="52" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 12 L8 24 L18 36 M30 12 L40 24 L30 36" stroke="#E8442A" stroke-width="3.4"/>
+            <path d="M24 20 V28" stroke="#0897D5" stroke-width="3.4"/>
+          </svg>
+          <h3>Barrera técnica</h3>
+        </div>
+        <p>Usar PaleoVox como biblioteca exige conocimientos avanzados de programación.</p>
+      </div>
+      </div>
+      <div class="card plain" style="padding: 12px 20px;">
+        <p class="body" style="font-size: 16.5px;">Como resultado, los modelos de IA ven pocos ejemplos limpios y su exactitud disminuye frente a especímenes reales, ya dañados por procesos tafonómicos.</p>
+      </div>
+    </div>
+    <div class="card" style="border-left: 5px solid var(--color-accent); padding: 12px 20px;">
+      <p class="body" style="font-size: 16.5px;">El <strong>aumento de datos</strong> multiplica digitalmente cada espécimen para atacar la escasez de muestras; <strong>PaleoVox GUI</strong> elimina la barrera de programación para aplicarlo y visualizarlo.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>2</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">2</div><h2>La solución: PaleoVox GUI</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div style="display:flex; gap:20px; flex: 1 1 auto; min-height: 0;">
+      <div style="flex: 1.05; display:flex; flex-direction:column; gap:10px;">
+        <div class="card plain" style="padding: 13px 18px;">
+          <p class="body">PaleoVox GUI es una <strong>aplicación escrita en Python</strong> orientada al usuario final que permite <strong>visualizar cómo trabajan los algoritmos</strong> de aumento de datos de PaleoVox sobre modelos digitales 3D de fósiles.</p>
+        </div>
+        <div class="card plain" style="padding: 13px 18px;">
+          <p class="body">Con ventanas sencillas, el usuario <strong>aplica los algoritmos</strong> de deformación, erosión, rotación y fracturas, y observa el resultado como <strong>nube de puntos, malla 3D, figura t-SNE o perspectiva 2D</strong>.</p>
+        </div>
+        <div class="card" style="border-left: 5px solid var(--color-secondary); padding: 10px 18px;">
+          <p class="body" style="font-size: 16.5px;">Sin escribir una sola línea de código: <strong>arrastrar, ajustar parámetros y visualizar</strong>.</p>
+        </div>
+        <div class="chips">
+          <span class="chip">Complementa el conjunto PaleoVox</span>
+          <span class="chip">100 % local · sin nube</span>
+          <span class="chip">Código abierto (MIT)</span>
+        </div>
+      </div>
+      <div style="flex: 0.95; display:flex; flex-direction:column; justify-content:center; gap:10px;">
+        <div class="pipe-row">
+          <div class="pipe-box"><b>Malla 3D</b><span>.ply · .obj</span></div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-box alt"><b>Vóxeles</b><span>.npy 128³–512³</span></div>
+        </div>
+        <div class="pipe-arrow" style="text-align:center;">↓</div>
+        <div class="pipe-row">
+          <div class="pipe-box" style="border-color: var(--color-accent);"><b style="color: var(--color-accent);">Daño tafonómico</b><span>4 simuladores combinables</span></div>
+        </div>
+        <div class="pipe-arrow" style="text-align:center;">↓</div>
+        <div class="pipe-row">
+          <div class="pipe-box alt"><b>Reconstrucción</b><span>malla watertight</span></div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-box"><b>Visualización</b><span>3D · t-SNE · 2D</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card plain" style="display: flex; gap: 16px; align-items: center; padding: 8px 14px;">
+      <img src="assets/screenshots/gui_about.png" alt="Diálogo “Más sobre PaleoVox…”: descripción y créditos" style="height: 112px; border: 1.5px solid var(--color-border); border-radius: 10px; display: block;">
+      <div>
+        <div style="font-family:'Montserrat','PVSymbols',Arial,sans-serif; font-weight: 700; font-size: 15.5px; color: var(--color-primary); margin-bottom: 4px;">“Más sobre PaleoVox…”</div>
+        <p class="body" style="font-size: 15px;">La propia aplicación incluye su <strong>descripción, versión y créditos</strong> del equipo de la Facultad de Ciencias y del Instituto de Geología, UNAM.</p>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>3</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">3</div><h2>¿Qué se puede hacer con la GUI?</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div style="flex: 1 1 auto; display: flex; align-items: center;">
+      <div class="grid g3" style="width: 100%;">
+      <div class="tile">
+        <div class="t-head">
+          <svg width="48" height="48" viewBox="0 0 48 48"><path d="M24 6 L42 15 L24 24 L6 15 Z" fill="#0897D5"/><path d="M6 15 L24 24 V42 L6 33 Z" fill="#003D64"/><path d="M42 15 L42 33 L24 42 V24 Z" fill="#1F6FA8"/><path d="M31 9.5 L37 12.5" stroke="#E8442A" stroke-width="3" stroke-linecap="round"/></svg>
+          <h3>Cuatro daños tafonómicos</h3>
+        </div>
+        <p>Aplicar <b>deformación (compactación), erosión, rotación y fracturas</b> de forma combinable sobre el volumen de vóxeles.</p>
+      </div>
+      <div class="tile">
+        <div class="t-head">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="24" cy="24" r="15"/>
+            <ellipse cx="24" cy="24" rx="15" ry="6" stroke="#0897D5"/>
+            <path d="M24 9 V39" stroke="#0897D5"/>
+          </svg>
+          <h3>Visualización 3D</h3>
+        </div>
+        <p>Ver los modelos alterados como <b>nube de puntos o malla</b> en espacios 3D con materiales PBR realistas.</p>
+      </div>
+      <div class="tile">
+        <div class="t-head">
+          <svg width="48" height="48" viewBox="0 0 48 48">
+            <circle cx="14" cy="16" r="3.4" fill="#003D64"/><circle cx="24" cy="12" r="3.4" fill="#0897D5"/><circle cx="33" cy="17" r="3.4" fill="#003D64"/><circle cx="18" cy="26" r="3.4" fill="#0897D5"/><circle cx="28" cy="27" r="3.4" fill="#003D64"/><circle cx="23" cy="36" r="3.4" fill="#0897D5"/><circle cx="12" cy="34" r="3.4" fill="#E8442A"/><circle cx="35" cy="33" r="3.4" fill="#0897D5"/>
+          </svg>
+          <h3>Análisis t-SNE</h3>
+        </div>
+        <p>Visualizar los modelos como <b>figuras planas</b>: mapas 2D donde los vóxeles similares se agrupan.</p>
+      </div>
+      <div class="tile">
+        <div class="t-head">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round">
+            <path d="M8 8 V40 H40"/>
+            <path d="M8 40 L22 20 L32 30 L42 12" stroke="#0897D5" stroke-width="3"/>
+            <circle cx="22" cy="20" r="2.6" fill="#E8442A" stroke="none"/>
+          </svg>
+          <h3>Perspectivas 2D</h3>
+        </div>
+        <p>Proyecciones tipo <b>“rayos X”</b> del volumen (XY, XZ, YZ) para revisar forma, densidad y orientación.</p>
+      </div>
+      <div class="tile">
+        <div class="t-head">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round">
+            <circle cx="19" cy="24" r="11" stroke="#0897D5"/>
+            <circle cx="30" cy="24" r="11"/>
+            <path d="M14 24 H34 M24 18 V30" stroke="#E8442A" stroke-width="3"/>
+          </svg>
+          <h3>Comparar dos modelos</h3>
+        </div>
+        <p>Comparar dos <b>archivos .npy</b> como nubes de puntos, aun sin haber ejecutado el flujo completo.</p>
+      </div>
+      <div class="tile">
+        <div class="t-head">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="#003D64" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 34 L20 15 L32 34 Z" stroke="#0897D5"/>
+            <path d="M14 12 H40 M28 34 H44 M40 8 V16 M44 30 V38" stroke="#E8442A" stroke-width="3"/>
+          </svg>
+          <h3>Vóxeles ↔ polígonos</h3>
+        </div>
+        <p>Transformar de manera <b>bidireccional</b> los modelos de vóxeles a mallas de polígonos y viceversa.</p>
+      </div>
+      </div>
+    </div>
+    <div class="card" style="border-left: 5px solid var(--color-secondary); padding: 11px 20px;">
+      <p class="body" style="font-size: 16px;">Todas las visualizaciones pueden <strong>exportarse como figuras de alta calidad</strong> para incluirlas en reportes o artículos científicos.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>4</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">4</div><h2>La interfaz de un vistazo</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div style="display:flex; gap:20px; flex: 1 1 auto; min-height: 0;">
+      <div style="flex: 1.72; display:flex; flex-direction:column; gap:8px; min-width: 0;">
+        <div class="shot">
+          <img src="assets/screenshots/gui_full_pipeline.png" alt="Ventana principal de PaleoVox GUI con el flujo completo ejecutado">
+          <div class="badge" style="left: 5.5%; top: 20%;">1</div>
+          <div class="badge" style="left: 5.5%; top: 44%;">2</div>
+          <div class="badge" style="left: 62%; top: 40%;">4</div>
+        </div>
+        <div class="cap"><b>Flujo completo sobre skull.ply:</b> rejilla 128³ con <b>91,203 vóxeles ocupados</b> tras dilatar, deformar, erosionar y fracturar el modelo.</div>
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 2px;">
+          <div>
+            <img src="assets/screenshots/gui_tab1_trim.png" alt="Pestaña 1" style="width: 100%; height: 54px; object-fit: cover; object-position: top left; border: 1.5px solid var(--color-border); border-radius: 8px; display: block;">
+            <div style="font-size: 12px; text-align: center; color: var(--color-ink-soft); margin-top: 3px;">1 · Pipeline</div>
+          </div>
+          <div>
+            <img src="assets/screenshots/gui_tab2_trim.png" alt="Pestaña 2" style="width: 100%; height: 54px; object-fit: cover; object-position: top left; border: 1.5px solid var(--color-border); border-radius: 8px; display: block;">
+            <div style="font-size: 12px; text-align: center; color: var(--color-ink-soft); margin-top: 3px;">2 · Reconstrucción</div>
+          </div>
+          <div>
+            <img src="assets/screenshots/gui_tab3_trim.png" alt="Pestaña 3" style="width: 100%; height: 54px; object-fit: cover; object-position: top left; border: 1.5px solid var(--color-border); border-radius: 8px; display: block;">
+            <div style="font-size: 12px; text-align: center; color: var(--color-ink-soft); margin-top: 3px;">3 · Ver y guardar</div>
+          </div>
+          <div>
+            <img src="assets/screenshots/gui_tab4_trim.png" alt="Pestaña 4" style="width: 100%; height: 54px; object-fit: cover; object-position: top left; border: 1.5px solid var(--color-border); border-radius: 8px; display: block;">
+            <div style="font-size: 12px; text-align: center; color: var(--color-ink-soft); margin-top: 3px;">4 · t-SNE</div>
+          </div>
+          <div>
+            <img src="assets/screenshots/gui_tab5_trim.png" alt="Pestaña 5" style="width: 100%; height: 54px; object-fit: cover; object-position: top left; border: 1.5px solid var(--color-border); border-radius: 8px; display: block;">
+            <div style="font-size: 12px; text-align: center; color: var(--color-ink-soft); margin-top: 3px;">5 · Perspectivas 2D</div>
+          </div>
+        </div>
+      </div>
+      <div style="flex: 1; display:flex; flex-direction:column; gap:12px; min-width: 0;">
+        <div class="legend">
+          <div class="lg-item"><div class="badge">1</div><p><b>Zona de arrastre.</b> Se carga un <b>.ply</b>, <b>.obj</b> o <b>.npy</b> arrastrando el archivo o explorando el equipo.</p></div>
+          <div class="lg-item"><div class="badge">2</div><p><b>Información del modelo.</b> Ruta, vértices, triángulos y estado de la rejilla de vóxeles.</p></div>
+          <div class="lg-item"><div class="badge blue">3</div><p><b>Cinco pestañas</b> que ordenan el flujo: pipeline, reconstrucción, vista, t-SNE y perspectivas 2D.</p></div>
+          <div class="lg-item"><div class="badge">4</div><p><b>Controles con valores por defecto</b> documentados; <b>Reset All</b> restaura todo al estado inicial.</p></div>
+        </div>
+        <div class="chips">
+          <span class="chip">34 controles</span>
+          <span class="chip">Valores por defecto</span>
+          <span class="chip">Reinicio total</span>
+        </div>
+        <div class="card" style="padding: 11px 16px;">
+          <p class="body" style="font-size: 14px;"><strong>Visor en ventana aparte:</strong> cada vista 3D se abre en un proceso independiente, así la aplicación nunca se bloquea.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>5</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">5</div><h2>El flujo de trabajo, sin código</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div style="display:flex; gap:16px;">
+      <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+        <div class="shot"><img src="assets/screenshots/gui_initial.png" alt="Estado inicial de la GUI con la zona de arrastre activa"></div>
+        <div class="cap"><b>1. Estado inicial.</b> Zona de arrastre activa y acciones deshabilitadas: solo se habilita lo que el modelo permite.</div>
+      </div>
+      <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+        <div class="shot"><img src="assets/screenshots/gui_loaded.png" alt="skull.ply cargado en la GUI"></div>
+        <div class="cap"><b>2. Modelo cargado.</b> skull.ply: 1,530,891 vértices y 3,000,000 de triángulos listos para voxelizar.</div>
+      </div>
+    </div>
+    <div class="chain" style="margin-top:2px;">
+      <div class="step"><b>Arrastrar archivo</b><span>.ply · .obj · .npy</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>Mesh → Voxels</b><span>resolución ajustable</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>Aplicar daños</b><span>combinables y acumulativos</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>Voxels → Mesh</b><span>reconstrucción watertight</span></div>
+      <div class="arrow">→</div>
+      <div class="step"><b>Guardar y exportar</b><span>.npy · .ply · .obj · PNG</span></div>
+    </div>
+    <div class="card" style="padding: 10px 20px; border-left: 5px solid var(--color-secondary);">
+      <p class="body" style="font-size: 15.5px;">Cada operación se aplica sobre el estado actual: los daños <strong>se acumulan</strong> y todo el proceso corre <strong>localmente</strong>, sin servicios en la nube.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>6</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">6</div><h2>Pestaña 1 · Pipeline y aumentación</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div class="shot">
+      <img src="assets/screenshots/gui_tab1_trim.png" alt="Pestaña 1: Pipeline y aumentación">
+      <div class="badge blue" style="left: 10.5%; top: 20%;">1</div>
+      <div class="badge" style="left: 71.5%; top: 20%;">2</div>
+      <div class="badge" style="left: 60%; top: 42.5%;">3</div>
+    </div>
+    <div class="cap"><b>El corazón del flujo:</b> convertir la malla a vóxeles, aplicar los cuatro simuladores de daño y reconstruir o guardar el resultado deformado. <b>①</b> Cargar la malla · <b>②</b> Voxelizar · <b>③</b> Dilatar (sesión de ejemplo a 128³, el mínimo que habilita el relleno de huecos).</div>
+    <div style="flex: 1 1 auto; display: flex; align-items: center;">
+      <div class="grid g4" style="width: 100%;">
+      <div class="tile" style="padding: 11px 14px;">
+        <h3 style="font-size: 15px;">Deformación (compactación)</h3>
+        <p>Comprime el volumen en el eje elegido. Por defecto: <b>Z, factor 0.85</b>.</p>
+      </div>
+      <div class="tile" style="padding: 11px 14px;">
+        <h3 style="font-size: 15px;">Erosión</h3>
+        <p>Trunca el volumen de forma aleatoria en un eje. Por defecto: <b>X, incremento 0.5</b>.</p>
+      </div>
+      <div class="tile" style="padding: 11px 14px;">
+        <h3 style="font-size: 15px;">Rotación</h3>
+        <p>Giro rígido en 3D de −180° a 180° por eje, alrededor del centro del volumen.</p>
+      </div>
+      <div class="tile" style="padding: 11px 14px;">
+        <h3 style="font-size: 15px;">Fractura</h3>
+        <p>Propaga grietas estocásticas que eliminan planos de material. Máx. <b>10</b> por defecto.</p>
+      </div>
+      </div>
+    </div>
+    <div class="chips">
+      <span class="chip">npoints 100,000</span>
+      <span class="chip">dim 256³ por defecto</span>
+      <span class="chip">Dilate Voxels (relleno de huecos)</span>
+      <span class="chip accent">Save Deformed Voxels → .npy</span>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>7</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">7</div><h2>Pestaña 2 · Reconstrucción y comparación</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div class="shot">
+      <img src="assets/screenshots/gui_tab2_trim.png" alt="Pestaña 2: Reconstrucción y comparación">
+      <div class="badge blue" style="left: 5.5%; top: 20%;">1</div>
+      <div class="badge" style="left: 53%; top: 20%;">2</div>
+      <div class="badge" style="left: 5.5%; top: 58.5%;">3</div>
+    </div>
+    <div class="cap"><b>①</b> Reconstruir desde vóxeles · <b>②</b> Comparar original vs reconstruido en el visor 3D · <b>③</b> Guardar la malla reconstruida.</div>
+    <div style="display:flex; gap:20px; align-items:center; flex: 1 1 auto;">
+      <div style="flex:1.15;">
+        <ul class="checks" style="margin-bottom: 8px;">
+          <li>Reconstrucción <strong>watertight</strong>: cierre morfológico → componente principal → suavizado → Marching Cubes → reparación de huecos.</li>
+          <li>Comparación visual <strong>original (azul) vs. reconstruido (rojo)</strong> en el visor 3D.</li>
+          <li>La reconstrucción <strong>conserva escala y posición</strong> del espécimen original.</li>
+        </ul>
+        <div class="chips">
+          <span class="chip">Reconstruct from Voxels</span>
+          <span class="chip">Compare meshes</span>
+          <span class="chip accent">Save reconstructed mesh</span>
+        </div>
+      </div>
+      <div style="flex:1; display:flex; gap:14px; align-items:center; justify-content:center;">
+        <div style="text-align:center;">
+          <img src="assets/figures/fig_3d_original.png" alt="Malla original" style="width:132px; height:132px; border-radius:10px; border:1.5px solid var(--color-border);">
+          <div class="cap" style="margin-top:4px;">Original</div>
+        </div>
+        <div style="font-size:20px; color:var(--color-secondary); font-weight:800;">→</div>
+        <div style="text-align:center;">
+          <img src="assets/figures/fig_3d_augmented.png" alt="Malla reconstruida" style="width:132px; height:132px; border-radius:10px; border:1.5px solid var(--color-border);">
+          <div class="cap" style="margin-top:4px;">Reconstruida</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>8</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">8</div><h2>Pestaña 3 · Ver y guardar</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div class="shot">
+      <img src="assets/screenshots/gui_tab3_trim.png" alt="Pestaña 3: Ver y guardar">
+      <div class="badge blue" style="left: 5%; top: 51%;">1</div>
+      <div class="badge" style="left: 68%; top: 51%;">2</div>
+      <div class="badge" style="left: 33%; top: 63.5%;">3</div>
+    </div>
+    <div class="cap"><b>①</b> Ver la malla en el visor PBR · <b>②</b> Guardar malla (.ply + .obj) · <b>③</b> Marching Cubes para una vista suave y guardado de vóxeles (.npy).</div>
+    <div style="display:flex; gap:20px; align-items:center; flex: 1 1 auto;">
+      <div style="flex:0 0 auto; text-align:center;">
+        <img src="assets/figures/fig_3d_augmented.png" alt="Render PBR del visor integrado" style="width:150px; height:150px; border-radius:12px; border:1.5px solid var(--color-border);">
+        <div class="cap" style="margin-top:5px;"><b>Visor PBR integrado</b><br>material “bone” · fondo meshlab</div>
+      </div>
+      <div style="flex:1;">
+        <ul class="checks" style="margin-bottom: 8px;">
+          <li><strong>Visor 3D con render PBR:</strong> 13 materiales predefinidos y 5 fondos, con luces y sombreado realistas.</li>
+          <li><strong>Ver como bloques o como superficie suave</strong> (Marching Cubes) y elegir el color de visualización.</li>
+          <li><strong>Guardar malla</strong> (.ply + .obj con normales) o <strong>vóxeles</strong> (.npy) para entrenamiento.</li>
+        </ul>
+        <div class="chips">
+          <span class="chip">View Mesh / View Voxels</span>
+          <span class="chip">Save Mesh · Save Voxel</span>
+          <span class="chip blue">13 materiales PBR</span>
+          <span class="chip blue">5 fondos</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>9</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">9</div><h2>Pestaña 4 · Análisis t-SNE</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div style="display:flex; gap:20px; flex: 1 1 auto; min-height: 0;">
+      <div style="flex: 1.5; min-width: 0;">
+        <div class="shot"><img src="assets/screenshots/gui_dialog_tsne.png" alt="Comparación t-SNE entre el modelo original y el aumentado"></div>
+        <div class="cap" style="margin-top:6px;"><b>Mapa compartido</b> original (azul) vs. aumentado (rojo): en el mismo espacio de incrustación, la nube aumentada conserva la estructura global del espécimen.</div>
+        <div class="card" style="border-left: 5px solid var(--color-accent); padding: 11px 16px; margin-top: 8px;">
+          <p class="body" style="font-size: 14.5px;"><strong>Interpretación:</strong> el daño es <strong>plausible, no aleatorio</strong>: la forma global se mantiene mientras cambian las densidades locales.</p>
+        </div>
+      </div>
+      <div style="flex: 1; display:flex; flex-direction:column; gap:10px; min-width: 0;">
+        <div class="shot"><img src="assets/screenshots/gui_tab4_trim.png" alt="Controles de la pestaña t-SNE"></div>
+        <ul class="checks" style="margin-top:2px;">
+          <li>Cada punto es un vóxel; los <strong>vóxeles similares forman racimos</strong>.</li>
+          <li>Comparar “original vs. dañado” en una <strong>sola incrustación</strong> compartida.</li>
+          <li>Parámetros ajustables: perplejidad, semilla, muestreo y tamaño de punto.</li>
+        </ul>
+        <div class="chips">
+          <span class="chip">Perplejidad 100</span>
+          <span class="chip">Semilla 42</span>
+          <span class="chip">Muestreo 50 %</span>
+          <span class="chip accent">Imagen exportable</span>
+        </div>
+        <div class="card plain" style="padding: 11px 16px; margin-top: 2px;">
+          <div style="font-family:'Montserrat','PVSymbols',Arial,sans-serif; font-weight: 700; font-size: 14px; color: var(--color-primary); margin-bottom: 5px;">¿Cómo leerlo?</div>
+          <p class="body" style="font-size: 14px;">La GUI genera una <strong>incrustación compartida</strong>; los colores separan las dos nubes y los racimos indican vóxeles de forma similar.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>10</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">10</div><h2>Pestaña 5 · Perspectivas 2D</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div style="display:flex; gap:20px; flex: 1 1 auto; min-height: 0;">
+      <div style="flex: 1.15; min-width: 0; display:flex; flex-direction:column;">
+        <div class="shot" style="flex:1 1 auto; display:flex; align-items:center; justify-content:center; background:#FBFDFE;">
+          <img src="assets/screenshots/gui_dialog_2d.png" alt="Comparación en perspectiva 2D entre el modelo original y el actual" style="max-height: 470px; width: auto; margin: 0 auto;">
+        </div>
+        <div class="cap" style="margin-top:6px;"><b>Superposición en 2D:</b> el original (azul) y el actual (rojo) sobre el plano XY; la erosión trunca el volumen y la compactación lo comprime.</div>
+      </div>
+      <div style="flex: 1; display:flex; flex-direction:column; gap:10px; min-width: 0;">
+        <div class="shot"><img src="assets/screenshots/gui_tab5_trim.png" alt="Controles de la pestaña de perspectivas 2D"></div>
+        <ul class="checks" style="margin-top:2px;">
+          <li>Proyecciones tipo <strong>“rayos X”</strong> sobre cualquiera de los planos <strong>XY, XZ o YZ</strong>.</li>
+          <li>Elegir color, marcador, tamaño y transparencia de cada muestra.</li>
+          <li>Sin pipeline previo: <strong>comparar dos .npy externos</strong> directamente.</li>
+        </ul>
+        <div class="chips">
+          <span class="chip">Use External Voxels</span>
+          <span class="chip">Comparación A/B</span>
+          <span class="chip accent">Exportar PNG / JPG</span>
+        </div>
+        <div class="card" style="border-left: 5px solid var(--color-accent); padding: 11px 16px; margin-top: 2px;">
+          <p class="body" style="font-size: 14px;"><strong>Interpretación:</strong> la erosión trunca el volumen y la compactación lo comprime, pero el contorno externo se conserva.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>11</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">11</div><h2>Ejemplo con el cráneo (skull.ply) · Antes y después</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div style="display:flex; gap:26px; flex: 1 1 auto; align-items:center; justify-content:center;">
+      <div style="text-align:center; flex:1;">
+        <img src="assets/figures/fig_3d_original.png" alt="Escaneo original del cráneo" style="width:348px; height:348px; border-radius:14px; border:1.5px solid var(--color-border);">
+        <div class="cap" style="margin-top:8px; font-size:13px;"><b>Escaneo original</b><br>skull.ply · 3,000,000 de triángulos · voxelizado a 256³ con 100,000 puntos</div>
+      </div>
+      <div style="text-align:center; flex:0 0 auto;">
+        <div style="font-size:13px; font-weight:700; color:var(--color-primary); font-family:'Montserrat'; margin-bottom:6px;">COMPACTACIÓN + EROSIÓN + FRACTURA</div>
+        <div style="font-size:26px; color:var(--color-secondary); font-weight:800;">⟶</div>
+        <div class="cap" style="margin-top:6px;">efectos acumulativos<br>sobre los vóxeles</div>
+      </div>
+      <div style="text-align:center; flex:1;">
+        <img src="assets/figures/fig_3d_augmented.png" alt="Variante aumentada reconstruida" style="width:348px; height:348px; border-radius:14px; border:1.5px solid var(--color-border);">
+        <div class="cap" style="margin-top:8px; font-size:13px;"><b>Variante aumentada</b><br>malla watertight reconstruida desde los vóxeles dañados</div>
+      </div>
+    </div>
+    <div class="chips" style="justify-content:center;">
+      <span class="chip">Deformación Z · factor 0.82</span>
+      <span class="chip">Erosión X · incremento 0.40</span>
+      <span class="chip">Fractura · máx. 14</span>
+      <span class="chip accent">Mismo encuadre y materiales del visor PBR</span>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>12</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">12</div><h2>Ejemplo · Análisis de la variante aumentada</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div style="display:flex; gap:20px; flex: 1 1 auto; min-height: 0;">
+      <div style="flex: 1.2; display:flex; flex-direction:column; min-width:0;">
+        <div class="shot" style="flex:1 1 auto; display:flex; align-items:center; background:#fff;">
+          <img src="assets/figures/fig_2d_projections.png" alt="Proyecciones 2D del modelo de referencia y del aumentado" style="width:100%;">
+        </div>
+        <div class="cap" style="margin-top:6px;"><b>Perspectivas 2D (pestaña 5):</b> referencia (azul) vs. aumentado (rojo). La erosión trunca el volumen en X y la compactación lo comprime en Z, conservando el contorno externo.</div>
+      </div>
+      <div style="flex: 1; display:flex; flex-direction:column; min-width:0;">
+        <div class="shot" style="flex:1 1 auto; display:flex; align-items:center; background:#fff;">
+          <img src="assets/figures/fig_tsne.png" alt="Comparación t-SNE entre referencia y aumentado" style="width:100%;">
+        </div>
+        <div class="cap" style="margin-top:6px;"><b>t-SNE (pestaña 4):</b> la nube aumentada conserva la estructura global del espécimen en el espacio compartido: el daño es <b>plausible, no aleatorio</b>.</div>
+      </div>
+    </div>
+    <div class="card" style="border-left: 5px solid var(--color-secondary); padding: 11px 20px;">
+      <p class="body" style="font-size: 16px;">Ambas figuras se generaron desde la GUI y se exportaron <strong>listas para reportes y artículos científicos</strong>.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>13</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">13</div><h2>Impacto: una herramienta para distintos usuarios</h2><div class="s-rule"></div></header>
+  <div class="s-body" style="justify-content: center; gap: 14px;">
+    <div class="grid g3">
+      <div class="metric"><div class="m-num">25</div><div class="m-txt">funciones de biblioteca documentadas</div></div>
+      <div class="metric"><div class="m-num">5 <small>·</small> 34</div><div class="m-txt">pestañas y controles con valores por defecto</div></div>
+      <div class="metric"><div class="m-num">4</div><div class="m-txt">simuladores de daño tafonómico combinables</div></div>
+      <div class="metric"><div class="m-num">13 <small>/</small> 5</div><div class="m-txt">materiales PBR y fondos en el visor 3D</div></div>
+      <div class="metric"><div class="m-num">7</div><div class="m-txt">pasos de reconstrucción watertight</div></div>
+      <div class="metric"><div class="m-num">100<small>%</small></div><div class="m-txt">local: sin nube, sin cuentas, sin datos que salgan del equipo</div></div>
+    </div>
+    <div class="grid g4" style="margin-top:2px;">
+      <div class="tile" style="padding: 11px 14px;"><h3 style="font-size: 15px;">Investigación</h3><p>Variantes dañadas para entrenar aprendizaje profundo con control de parámetros.</p></div>
+      <div class="tile" style="padding: 11px 14px;"><h3 style="font-size: 15px;">Curaduría</h3><p>Comparación visual antes/después de especímenes digitalizados de colección.</p></div>
+      <div class="tile" style="padding: 11px 14px;"><h3 style="font-size: 15px;">Museos y difusión</h3><p>Visualizaciones 3D y figuras atractivas sin programar.</p></div>
+      <div class="tile" style="padding: 11px 14px;"><h3 style="font-size: 15px;">Docencia</h3><p>Enseñar morfología y tafonomía con modelos 3D interactivos.</p></div>
+    </div>
+    <div class="card" style="display: flex; gap: 10px; align-items: center; padding: 11px 20px;">
+      <p class="body" style="font-size: 15.5px;"><strong>Reproducibilidad y control:</strong> la rotación y el t-SNE aceptan semilla; la reconstrucción conserva escala y posición; cada paso se puede deshacer recargando el archivo .npy intermedio.</p>
+    </div>
+    <div class="card" style="border-left: 5px solid var(--color-secondary); padding: 11px 20px;">
+      <p class="body" style="font-size: 16px;">PaleoVox GUI <strong>complementa el conjunto de aplicaciones PaleoVox</strong> y hace accesible la visualización avanzada de modelos de fósiles <strong>sin conocimientos de programación</strong>.</p>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>14</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">14</div><h2>Limitaciones y trabajo futuro</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div style="flex: 1 1 auto; display: flex; align-items: center;">
+    <div style="display:flex; gap:20px; width: 100%;">
+      <div class="card limit" style="flex: 1.05;">
+        <h3 style="font-family:'Montserrat'; font-size: 18px; color: var(--color-accent); margin-bottom: 12px;">Limitaciones (sin sobreinterpretar)</h3>
+        <ul class="checks roomy" style="--c: var(--color-accent);">
+          <li>PaleoVox genera <strong>aumento sintético</strong>: no reconstruye la verdad biológica de un fósil real.</li>
+          <li>Los modelos de daño son <strong>aproximaciones simplificadas</strong> de la tafonomía, no simulaciones de historias geológicas específicas.</li>
+          <li>La exactitud de los modelos entrenados debe <strong>validarse</strong>: el aumento es una hipótesis, no una garantía.</li>
+          <li>No sustituye la <strong>curación física</strong>, el escaneo ni el análisis filogenético.</li>
+          <li>La calidad del aumento depende de la <strong>calidad del modelo de entrada</strong>.</li>
+        </ul>
+      </div>
+      <div class="card plain" style="flex: 0.95;">
+        <h3 style="font-family:'Montserrat'; font-size: 18px; color: var(--color-primary); margin-bottom: 12px;">Trabajo futuro</h3>
+        <ul class="checks roomy">
+          <li><strong>Aumentación en lote</strong>: generar N variantes por espécimen desde un archivo de configuración (API/CLI).</li>
+          <li><strong>Semillas reproducibles</strong> en todos los simuladores de daño.</li>
+          <li><strong>Metadatos en los .npy</strong> (escala y procedencia) para conservar unidades físicas.</li>
+          <li><strong>Adaptador PyTorch</strong> (Dataset/DataLoader) para integrarse al entrenamiento.</li>
+          <li><strong>Nuevos daños</strong>: abrasión, incrustación y distorsión post-entierro.</li>
+          <li><strong>Documentación</strong>: guía de uso y documento técnico (SSOT) como referencia pública del proyecto.</li>
+        </ul>
+      </div>
+    </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>PaleoVox GUI · XIX Congreso Nacional de Paleontología</span><span><b>15</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+<section class="slide">
+  <header class="s-head"><div class="s-num">15</div><h2>Conclusiones</h2><div class="s-rule"></div></header>
+  <div class="s-body">
+    <div style="display:flex; gap:22px; flex: 1 1 auto; min-height: 0;">
+      <div style="flex: 1.35; display:flex; flex-direction:column; gap:12px; justify-content: center;">
+        <ul class="checks" style="margin-top: 4px;">
+          <li>PaleoVox GUI es una <strong>herramienta funcional de extremo a extremo</strong>: malla → vóxeles → daño → reconstrucción → exportación.</li>
+          <li>Permite <strong>aplicar y visualizar los algoritmos</strong> de aumento de datos sin conocimientos de programación.</li>
+          <li>Incluye <strong>análisis integrado</strong> (t-SNE, perspectivas 2D, render PBR) y exporta figuras de alta calidad.</li>
+          <li><strong>Complementa al conjunto PaleoVox</strong> y hace más accesible la visualización de modelos de fósiles para la comunidad paleontológica.</li>
+        </ul>
+        <div class="chips">
+          <span class="chip blue">Paleontología virtual</span>
+          <span class="chip blue">Aumento de datos</span>
+          <span class="chip blue">Código abierto</span>
+          <span class="chip blue">Interfaz gráfica</span>
+        </div>
+        <div class="card" style="padding: 12px 16px;">
+          <div style="font-family:'Montserrat','PVSymbols',Arial,sans-serif; font-weight: 700; font-size: 13.5px; color: var(--color-primary); margin-bottom: 6px;">REFERENCIAS CLAVE</div>
+          <p class="body" style="font-size: 12.5px; line-height: 1.55; color: var(--color-ink-soft);">
+            [1] PaleoVox — Documento único de verdad (SSOT), UNAM, 2026. · [2] Zhou, Park y Koltun, <i>Open3D</i>, arXiv:1801.09847, 2018. · [3] van der Walt et al., <i>scikit-image</i>, PeerJ 2:e453, 2014. · [4] Pedregosa et al., <i>scikit-learn</i>, JMLR 12:2825–2830, 2011. · [5] Virtanen et al., <i>SciPy 1.0</i>, Nature Methods 17:261–272, 2020.
+          </p>
+        </div>
+      </div>
+      <div style="flex: 1; background: var(--color-primary); border-radius: 16px; padding: 22px 24px; color: #fff; display:flex; flex-direction:column; gap: 12px;">
+        <div style="font-family:'Montserrat'; font-weight:800; font-size: 29px;">¡Gracias!</div>
+        <div style="font-size: 14.5px; line-height: 1.55; color: #CFE6F5;">
+          <b style="color:#fff;">Contacto:</b> alan_amaro@ciencias.unam.mx<br>
+          <b style="color:#fff;">Repositorio:</b> github.com/ChuchoDC/PaleoVox<br>
+          <b style="color:#fff;">Licencia:</b> MIT · Python 3.9 · versión 1.0.6
+        </div>
+        <div style="display:flex; align-items:center; gap:16px; margin-top:auto;">
+          <div style="background:#fff; border-radius: 12px; padding: 8px;"><img src="assets/qr_repo.svg" alt="Código QR del repositorio" style="width: 104px; height: 104px; display:block;"></div>
+          <div style="font-size: 13.5px; line-height: 1.5; color: #CFE6F5;">Escanea para explorar el código y la documentación del proyecto.<br><br><b style="color:#fff;">Facultad de Ciencias e Instituto de Geología, UNAM</b></div>
+        </div>
+        <div style="display:flex; gap: 10px; align-items:center; margin-top: 8px;">
+          <div style="background:#fff; border-radius: 10px; padding: 6px 10px;"><img src="assets/logos/unam-azul.png" alt="UNAM" style="height: 40px; display: block;"></div>
+          <div style="background:#fff; border-radius: 10px; padding: 6px 10px;"><img src="assets/logos/geologia-color.png" alt="Instituto de Geología" style="height: 36px; display: block;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer class="s-foot"><span>XIX Congreso Nacional de Paleontología · La Paz, BCS · 2026</span><span><b>16</b> / 16</span></footer>
+  <div class="accent-strip"></div>
+</section>
+
+</body>
+</html>

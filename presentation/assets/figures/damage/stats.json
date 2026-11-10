@@ -1,0 +1,32 @@
+{
+  "deformacion": {
+    "label": "Deformación",
+    "occupied": 472410,
+    "occupied_original": 729596,
+    "view_2d": "XZ"
+  },
+  "erosion": {
+    "label": "Erosión",
+    "occupied": 595939,
+    "occupied_original": 729596,
+    "view_2d": "XY"
+  },
+  "rotacion": {
+    "label": "Rotación",
+    "occupied": 711645,
+    "occupied_original": 729596,
+    "view_2d": "YZ"
+  },
+  "fractura": {
+    "label": "Fractura",
+    "occupied": 724137,
+    "occupied_original": 729596,
+    "view_2d": "YZ"
+  },
+  "combinado": {
+    "label": "Daño combinado",
+    "occupied": 375653,
+    "occupied_original": 729596,
+    "view_2d": "XZ"
+  }
+}

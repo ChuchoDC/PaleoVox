@@ -2,7 +2,7 @@
 
 > **Document status:** Living document. Every statement here is derived from the current source tree
 > (`paleovoxpy.py`, `paleovox_gui.py`, `paleovox_viewer.py`, `branding/`, `test_data/`).
-> **Last updated:** 2026-10-10
+> **Last updated:** 2026-11-10
 > **Maintainers:** Alan Gabriel Amaro Colin and the PaleoVox team (see [Appendix D](#appendix-d-authors-contacts--project-identity)).
 > **How to use this document:** pick the section that matches your need —
 > [non-technical overview](#2-non-technical-guide) for plain-language explanation,
@@ -63,6 +63,7 @@ data-scarcity bottleneck without handling physical specimens.
 | PBR viewer | `paleovox_viewer.py` (165 lines) | Standalone Open3D physically-based-rendering mesh viewer run as a subprocess |
 | Branding | `branding/` + `logo/` | UNAM brandbook and logo assets |
 | Sample data | `test_data/` | Meshes and voxel grids for testing/demos |
+| Outreach | `presentation/` + `marketing/` | XIX Congreso Nacional de Paleontología talk (awarded "Mejor presentación") and the Instagram campaign |
 
 **Status.** Functional research software, version string `1.0.6` in the backend
 ([paleovoxpy.py:9](paleovoxpy.py)). Ready for research use; the known-issues register
@@ -286,6 +287,9 @@ provide light- and dark-background variants.
   `#OpenSource` `#UNAM` `#3D`
 - **Channels:** GitHub repository, academic conferences and seminars, UNAM faculty/institute
   networks, museum partnerships, LinkedIn/X technical threads, educational workshops.
+- **Instagram:** an 8-day bilingual (ES/EN) campaign, with 1 post and 1 story per day, lives in `marketing/`.
+  `calendar.md` holds the captions, hashtags, alt text and sticker plan, and `node marketing/render.js`
+  regenerates the PNGs from `posts.html` / `stories.html`.
 
 ### 3.8 Messaging guardrails (do not overclaim)
 
@@ -314,6 +318,10 @@ PaleoVox/
 │   └── logos/             # unam-azul.png, unam-dorado.png, geologia-color.png, geologia-mono.png
 ├── docs/
 │   └── SSOT.md            # This document
+├── presentation/          # XIX CNP talk: slides*.html, guion_oral.md, assets/, renders/ (PDF + PNG previews)
+│   └── scripts/           # render.js (Playwright → PNG/PDF), make_damage_figures.py, capture_extra.py
+├── marketing/             # Instagram campaign: posts.html, stories.html, campaign.css, calendar.md,
+│                          # render.js, renders/{posts,stories}/ (reuses ../presentation/assets)
 └── test_data/
     ├── skull.ply                        # 57 MB, decimated skull mesh
     ├── test_object.obj                  # 21 MB, test mesh
